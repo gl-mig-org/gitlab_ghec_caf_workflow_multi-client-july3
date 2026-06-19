@@ -1,9 +1,10 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::RepositorySerializer, :v4 do
   let(:user_project) do
     VCR.use_cassette("v4/gitlab-projects/synthead/test-repo") do
-      Gitlab.project('synthead', 'test-repo')
+      Gitlab.project("synthead", "test-repo")
     end
   end
 
@@ -54,19 +55,19 @@ describe GlExporter::RepositorySerializer, :v4 do
 
       it "returns a serialized Repository hash" do
         expected = {
-          :type           => "repository",
-          :url            => "https://gitlab.com/synthead/test-repo",
-          :owner          => "https://gitlab.com/synthead",
-          :name           => "test-repo",
-          :description    => "This repo is for demonstration purposes only.",
-          :website        => nil,
-          :private        => true,
-          :has_issues     => true,
-          :has_wiki       => true,
-          :has_downloads  => true,
-          :created_at     => "2017-07-20T00:35:22.243Z",
-          :git_url        => "tarball://root/repositories/synthead/test-repo.git",
-          :default_branch => "master"
+          type: "repository",
+          url: "https://gitlab.com/synthead/test-repo",
+          owner: "https://gitlab.com/synthead",
+          name: "test-repo",
+          description: "This repo is for demonstration purposes only.",
+          website: nil,
+          private: true,
+          has_issues: true,
+          has_wiki: true,
+          has_downloads: true,
+          created_at: "2017-07-20T00:35:22.243Z",
+          git_url: "tarball://root/repositories/synthead/test-repo.git",
+          default_branch: "master"
         }
 
         expected.each do |key, value|
@@ -115,20 +116,20 @@ describe GlExporter::RepositorySerializer, :v4 do
 
         it "returns a serialized Repository hash with an owner" do
           expected = {
-            :type           => "repository",
-            :url            => "https://gitlab.com/Mouse-Hack/hugo-pages",
-            :owner          => "https://gitlab.com/groups/Mouse-Hack",
-            :name           => "hugo-pages",
-            :description    => "Wanna use something other than jekyll? Try this one weird trick. er, actually a bunch of tricks, glued together.",
-            :website        => nil,
-            :private        => true,
-            :has_issues     => true,
-            :has_wiki       => true,
-            :has_downloads  => true,
-            :created_at     => "2016-05-10T21:15:14.616Z",
-            :git_url        => "tarball://root/repositories/Mouse-Hack/hugo-pages.git",
-            :wiki_url        => "tarball://root/repositories/Mouse-Hack/hugo-pages.wiki.git",
-            :default_branch => "master"
+            type: "repository",
+            url: "https://gitlab.com/Mouse-Hack/hugo-pages",
+            owner: "https://gitlab.com/groups/Mouse-Hack",
+            name: "hugo-pages",
+            description: "Wanna use something other than jekyll? Try this one weird trick. er, actually a bunch of tricks, glued together.",
+            website: nil,
+            private: true,
+            has_issues: true,
+            has_wiki: true,
+            has_downloads: true,
+            created_at: "2016-05-10T21:15:14.616Z",
+            git_url: "tarball://root/repositories/Mouse-Hack/hugo-pages.git",
+            wiki_url: "tarball://root/repositories/Mouse-Hack/hugo-pages.wiki.git",
+            default_branch: "master"
           }
 
           expected.each do |key, value|
@@ -140,19 +141,19 @@ describe GlExporter::RepositorySerializer, :v4 do
       context "when a group is not provided" do
         it "returns a serialized Repository hash without an owner" do
           expected = {
-            :type           => "repository",
-            :url            => "https://gitlab.com/Mouse-Hack/hugo-pages",
-            :name           => "hugo-pages",
-            :description    => "Wanna use something other than jekyll? Try this one weird trick. er, actually a bunch of tricks, glued together.",
-            :website        => nil,
-            :private        => true,
-            :has_issues     => true,
-            :has_wiki       => true,
-            :has_downloads  => true,
-            :created_at     => "2016-05-10T21:15:14.616Z",
-            :git_url        => "tarball://root/repositories/Mouse-Hack/hugo-pages.git",
-            :wiki_url        => "tarball://root/repositories/Mouse-Hack/hugo-pages.wiki.git",
-            :default_branch => "master"
+            type: "repository",
+            url: "https://gitlab.com/Mouse-Hack/hugo-pages",
+            name: "hugo-pages",
+            description: "Wanna use something other than jekyll? Try this one weird trick. er, actually a bunch of tricks, glued together.",
+            website: nil,
+            private: true,
+            has_issues: true,
+            has_wiki: true,
+            has_downloads: true,
+            created_at: "2016-05-10T21:15:14.616Z",
+            git_url: "tarball://root/repositories/Mouse-Hack/hugo-pages.git",
+            wiki_url: "tarball://root/repositories/Mouse-Hack/hugo-pages.wiki.git",
+            default_branch: "master"
           }
 
           expected.each do |key, value|

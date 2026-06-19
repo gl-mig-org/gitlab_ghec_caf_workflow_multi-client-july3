@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::UserContentRewritable, :v3 do

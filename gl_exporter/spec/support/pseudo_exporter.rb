@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class PseudoExporter
   attr_accessor :model
 

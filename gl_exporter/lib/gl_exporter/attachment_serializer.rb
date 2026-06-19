@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Attachments from a temporary model
@@ -24,7 +25,10 @@ class GlExporter
         :asset_name => asset_name,
         :asset_content_type => content_type,
         :asset_url => local_asset_url,
-        :created_at => created_at,
+        # Importer schema uses :created_date for attachments (mirrors
+        # gh-gl2gh-legacy/src/gl2gh/Services/GlSerializer.cs SerializeAttachment).
+        # Emitting :created_at causes the importer to silently drop the record.
+        :created_date => created_at,
       }
     end
 
@@ -54,19 +58,13 @@ class GlExporter
       File.basename(attach_path)
     end
 
+    # Infer the MIME type from the file name. GitLab's upload endpoint always
+    # returns `application/octet-stream` from HEAD requests, which makes the
+    # importer wrap non-image attachments as `.zip` blobs and skip inline
+    # rendering for images, so we let Marcel infer a real type from the
+    # extension instead.
     def content_type
-      u = url
-
-      begin
-        Gitlab.connection.head(u, private_token: token)['Content-Type']
-      rescue URI::InvalidURIError => e
-        if e.message[/^URI must be ascii only/]
-          u = Addressable::URI.encode(u)
-          retry
-        else
-          raise
-        end
-      end
+      Marcel::MimeType.for(name: attach_path)
     end
 
     def token
@@ -74,7 +72,7 @@ class GlExporter
     end
 
     def local_asset_url
-      File.join("tarball://root/attachments/", attach_path)
+      File.join("tarball://root/attachments/", gl_model["archive_path"] || attach_path)
     end
 
     def created_at

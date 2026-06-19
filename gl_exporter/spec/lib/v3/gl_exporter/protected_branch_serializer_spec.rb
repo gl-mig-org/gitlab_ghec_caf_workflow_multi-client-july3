@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::ProtectedBranchSerializer, :v3 do
   let(:protected_branch) do

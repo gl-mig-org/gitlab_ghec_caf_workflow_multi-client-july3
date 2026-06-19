@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::IssueSerializer, :v3 do
   let(:issue) do
@@ -22,20 +23,20 @@ describe GlExporter::IssueSerializer, :v3 do
 
     it "returns a serialized Issue hash" do
       expected = {
-          :type       => "issue",
-          :url        => "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5",
-          :repository => "https://gitlab.com/Mouse-Hack/hugo-pages",
-          :user       => "https://gitlab.com/u/jonmagic",
-          :title      => "Don't have a GitHub account",
-          :body       => %{I appreciate wanting to support logging in with GitHub but I don't have a GitHub account and cannot legally sign up for one in my country due to my age unless I get my parents permission. See https://gitlab.com/Mouse-Hack/hugo-pages/issues/1 for more details.},
-          :assignee   => "https://gitlab.com/u/kylemacey",
-          :milestone  => "https://gitlab.com/Mouse-Hack/hugo-pages/milestones/1",
-          :labels     => [
+          type: "issue",
+          url: "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5",
+          repository: "https://gitlab.com/Mouse-Hack/hugo-pages",
+          user: "https://gitlab.com/u/jonmagic",
+          title: "Don't have a GitHub account",
+          body: %{I appreciate wanting to support logging in with GitHub but I don't have a GitHub account and cannot legally sign up for one in my country due to my age unless I get my parents permission. See https://gitlab.com/Mouse-Hack/hugo-pages/issues/1 for more details.},
+          assignee: "https://gitlab.com/u/kylemacey",
+          milestone: "https://gitlab.com/Mouse-Hack/hugo-pages/milestones/1",
+          labels: [
             "https://gitlab.com/Mouse-Hack/hugo-pages/labels#/Blocker",
             "https://gitlab.com/Mouse-Hack/hugo-pages/labels#/Bug"
           ],
-          :closed_at  => nil,
-          :created_at => "2016-05-10T22:20:29.872Z"
+          closed_at: nil,
+          created_at: "2016-05-10T22:20:29.872Z"
         }
 
       expected.each do |key, value|

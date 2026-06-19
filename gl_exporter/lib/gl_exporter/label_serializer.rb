@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Labels from GitLab's Labels
@@ -13,11 +14,11 @@ class GlExporter
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :type => 'label',
-        :url => url_for_model(gl_model, type: 'label'),
-        :name => gl_model["name"],
-        :color => color,
-        :created_at => Time.now
+        type: "label",
+        url: url_for_model(gl_model, type: "label"),
+        name: gl_model["name"],
+        color: color,
+        created_at: Time.now
       }
     end
 

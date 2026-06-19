@@ -1,11 +1,16 @@
-source 'https://rubygems.org'
+# frozen_string_literal: true
+source "https://rubygems.org"
 
 # Specify your gem's dependencies in gl_exporter.gemspec
 gemspec
 
-gem 'pry-byebug'#, '~> 3.4.0'
-gem 'vcr'
-gem 'rspec'
-gem 'webmock'
-gem 'pry-rescue'
-gem 'pry-stack_explorer'
+gem "pry-byebug"#, '~> 3.4.0'
+gem "pry-rescue"
+gem "pry-stack_explorer"
+gem "rspec"
+gem "vcr"
+gem "webmock"
+
+gem "rubocop-github", require: false
+gem "rubocop-performance", require: false
+gem "rubocop-rails", require: false

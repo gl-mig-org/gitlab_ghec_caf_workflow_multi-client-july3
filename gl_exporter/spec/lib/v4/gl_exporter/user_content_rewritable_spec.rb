@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::UserContentRewritable, :v4 do
@@ -29,6 +30,69 @@ describe GlExporter::UserContentRewritable, :v4 do
       expect(pseudo_exporter).to receive(:rewrite_numeric_mentions)
         .with("note")
       pseudo_exporter.rewrite_user_content!
+    end
+
+    it "strips Kramdown image attribute lists" do
+      expect(pseudo_exporter).to receive(:rewrite_kramdown_image_attributes)
+        .with("note")
+      pseudo_exporter.rewrite_user_content!
+    end
+  end
+
+  describe "#rewrite_kramdown_image_attributes" do
+    context "with a resized inline image" do
+      let(:body_content) do
+        "before ![diagram](/uploads/abc123/x.png){width=900 height=522} after"
+      end
+
+      it "removes the trailing Kramdown IAL but keeps the image" do
+        pseudo_exporter.rewrite_kramdown_image_attributes("note")
+        expect(pseudo_model["note"])
+          .to eq("before ![diagram](/uploads/abc123/x.png) after")
+      end
+    end
+
+    context "with an absolute image url" do
+      let(:body_content) do
+        "![diagram](https://gitlab.example.com/uploads/abc/x.png){width=120 height=80}"
+      end
+
+      it "removes the IAL regardless of url form" do
+        pseudo_exporter.rewrite_kramdown_image_attributes("note")
+        expect(pseudo_model["note"])
+          .to eq("![diagram](https://gitlab.example.com/uploads/abc/x.png)")
+      end
+    end
+
+    context "with multiple images in one body" do
+      let(:body_content) do
+        "![a](/uploads/1/a.png){width=10} text ![b](/uploads/2/b.png){width=20 height=30}"
+      end
+
+      it "strips every image's IAL" do
+        pseudo_exporter.rewrite_kramdown_image_attributes("note")
+        expect(pseudo_model["note"])
+          .to eq("![a](/uploads/1/a.png) text ![b](/uploads/2/b.png)")
+      end
+    end
+
+    context "with braces that do not follow an image" do
+      let(:body_content) { "plain text {width=900 height=522} and `code {x=1}`" }
+
+      it "leaves unrelated braces untouched" do
+        pseudo_exporter.rewrite_kramdown_image_attributes("note")
+        expect(pseudo_model["note"])
+          .to eq("plain text {width=900 height=522} and `code {x=1}`")
+      end
+    end
+
+    context "with an image that has no IAL" do
+      let(:body_content) { "![plain](/uploads/abc/x.png)" }
+
+      it "leaves the image untouched" do
+        pseudo_exporter.rewrite_kramdown_image_attributes("note")
+        expect(pseudo_model["note"]).to eq("![plain](/uploads/abc/x.png)")
+      end
     end
   end
 

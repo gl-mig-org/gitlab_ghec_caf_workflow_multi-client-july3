@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   class CommitCommentExporter
     include UserContentRewritable
@@ -52,15 +53,15 @@ class GlExporter
 
     # Instruct the exporter to export the `commit_comment`.
     def export
-      serialize("commit_comment", commit_comment)
       extract_attachments("commit_comment", commit_comment)
+      serialize("commit_comment", commit_comment)
     end
 
     # Normalize commit comment when it is a string
     def normalize_commit_comment(raw)
       return raw if raw.is_a?(Hash)
       return JSON.parse(raw) if raw.is_a?(String)
-      
+
       logger.error "Commit comment not JSON; surfacing comment #{raw}"
       raise ArgumentError, "Commit comment not JSON: #{raw}"
     rescue JSON::ParserError

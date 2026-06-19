@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::ProjectExporter, :v3 do
@@ -280,7 +281,7 @@ describe GlExporter::ProjectExporter, :v3 do
     context "when project is owned by a user" do
       let(:project) do
         VCR.use_cassette("v3/gitlab-projects/kylemacey/Spoon-Knife") do
-          Gitlab.project('kylemacey', 'Spoon-Knife')
+          Gitlab.project("kylemacey", "Spoon-Knife")
         end
       end
 
@@ -304,6 +305,115 @@ describe GlExporter::ProjectExporter, :v3 do
       it "attempts to export a group" do
         expect(project_exporter).to receive(:export_group)
         subject
+      end
+    end
+  end
+
+  describe "#log_malformed_project_payload" do
+    let(:logger) { instance_double(Logger) }
+
+    before do
+      allow(gl_exporter).to receive(:output_logger).and_return(logger)
+      allow(logger).to receive(:error)
+    end
+
+    context "when project is a normal Hash" do
+      let(:malformed_project) do
+        {
+          "id" => 123,
+          "name" => "test-project",
+          "path" => "test-project",
+          "path_with_namespace" => "test-org/test-project",
+          "namespace" => nil,
+          "other_field" => "should not appear"
+        }
+      end
+      let(:project_exporter) { described_class.new(malformed_project, current_export: gl_exporter) }
+
+      it "logs relevant fields and excludes non-relevant fields" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error) do |message|
+          expect(message).to match(/Malformed project payload.*"id"=>123.*"name"=>"test-project"/m)
+          expect(message).not_to include("other_field")
+        end
+      end
+    end
+
+    context "when slice fails and falls back to to_h" do
+      let(:failing_slice_project) do
+        obj = double("FailingSliceProject")
+        allow(obj).to receive(:is_a?).with(Hash).and_return(false)
+        allow(obj).to receive(:respond_to?).with(:slice).and_return(true)
+        allow(obj).to receive(:respond_to?).with(:to_h).and_return(true)
+        allow(obj).to receive(:slice).and_raise(ArgumentError, "Invalid arguments")
+        allow(obj).to receive(:to_h).and_return({
+          "id" => 789,
+          "name" => "fallback-project",
+          "extra" => "data"
+        })
+        obj
+      end
+      let(:project_exporter) { described_class.new(failing_slice_project, current_export: gl_exporter) }
+
+      it "falls back to to_h and filters fields correctly" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error) do |message|
+          expect(message).to match(/Malformed project payload.*"id"=>789.*"name"=>"fallback-project"/m)
+          expect(message).not_to include("extra")
+        end
+      end
+    end
+
+    context "when both slice and to_h fail" do
+      let(:completely_broken_project) do
+        obj = double("CompletelyBrokenProject")
+        allow(obj).to receive(:is_a?).with(Hash).and_return(false)
+        allow(obj).to receive(:respond_to?).with(:slice).and_return(true)
+        allow(obj).to receive(:respond_to?).with(:to_h).and_return(true)
+        allow(obj).to receive(:slice).and_raise(ArgumentError)
+        allow(obj).to receive(:to_h).and_raise(StandardError, "Cannot convert to hash")
+        allow(obj).to receive(:class).and_return(double(name: "WeirdObject"))
+        allow(obj).to receive(:inspect).and_return("x" * 300)
+        obj
+      end
+      let(:project_exporter) { described_class.new(completely_broken_project, current_export: gl_exporter) }
+
+      it "logs error with type and truncates value to 200 chars" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error) do |message|
+          expect(message).to match(/Malformed project payload.*unable to slice project payload.*WeirdObject/m)
+          expect(message).to include("x" * 200)
+          expect(message).not_to include("x" * 201)
+        end
+      end
+    end
+
+    context "when project is not a Hash-like object" do
+      let(:string_project) { "not a hash at all" }
+      let(:project_exporter) { described_class.new(string_project, current_export: gl_exporter) }
+
+      it "logs error with type" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error).with(
+          /Malformed project payload.*project is not a Hash.*String/m
+        )
+      end
+    end
+
+    context "when project is nil" do
+      let(:nil_project) { nil }
+      let(:project_exporter) { described_class.new(nil_project, current_export: gl_exporter) }
+
+      it "logs error indicating nil project" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error).with(
+          /Malformed project payload.*project is not a Hash.*NilClass/m
+        )
       end
     end
   end
@@ -421,7 +531,7 @@ describe GlExporter::ProjectExporter, :v3 do
         issue,
         project_exporter: project_exporter,
       )
-      expect{subject}.to change{project_exporter.issues.length}.by(1)
+      expect { subject }.to change { project_exporter.issues.length }.by(1)
     end
   end
 
@@ -471,7 +581,7 @@ describe GlExporter::ProjectExporter, :v3 do
         project_exporter: project_exporter,
         project_owner: project_owner,
       )
-      expect{subject}.to change{project_exporter.merge_requests.length}.by(1)
+      expect { subject }.to change { project_exporter.merge_requests.length }.by(1)
     end
   end
 
@@ -599,7 +709,7 @@ describe GlExporter::ProjectExporter, :v3 do
         commit_comment,
         project_exporter: project_exporter,
       )
-      expect{subject}.to change{project_exporter.commit_comments.length}.by(1)
+      expect { subject }.to change { project_exporter.commit_comments.length }.by(1)
     end
   end
 
@@ -621,7 +731,7 @@ describe GlExporter::ProjectExporter, :v3 do
       [
         {
           "created_at" => DateTime.current - 5,
-          "iid"       => 1
+          "iid" => 1
         },
         {
           "created_at" => DateTime.current - 3,

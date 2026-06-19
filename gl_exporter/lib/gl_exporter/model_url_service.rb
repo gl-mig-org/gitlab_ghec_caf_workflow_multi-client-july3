@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   # @todo Update to use UrlTemplates.
   class ModelUrlService
@@ -10,7 +11,7 @@ class GlExporter
     # @option opts [String] :type the type of model being passed in; uses GitHub
     #   naming conventions
     # @return [String] the url for the model
-    def url_for_model(model, opts={})
+    def url_for_model(model, opts = {})
       return unless model
 
       case opts[:type]
@@ -54,12 +55,51 @@ class GlExporter
       end
     end
 
+    # Builds the authenticated project-uploads API URL that serves an upload's
+    # bytes under PRIVATE-TOKEN on GitLab >= 17.4:
+    #   GET <api_endpoint>/projects/<id>/uploads/<secret>/<filename>
+    #
+    # attach_path is "/uploads/<secret>/<filename>", e.g.
+    #   "/uploads/aca2cc60c183e113481adbdd167aa9fe/pdf-sample.pdf"
+    #   => "<api_endpoint>/projects/<id>/uploads/aca2cc60c183e113481adbdd167aa9fe/pdf-sample.pdf"
+    # Returns nil when there is no numeric project id, or when attach_path is not
+    # "/uploads/<secret>/<filename>", so the caller can fall back to the web URL.
+    #
+    # @param [Hash] project a GitLab project model
+    # @param [String] attach_path the inline "/uploads/..." path
+    # @return [String, nil]
+    def upload_api_url(project, attach_path)
+      return unless project && project["id"]
+
+      upload = attach_path.to_s.match(%r{\A/uploads/(?<secret>[^/]+)/(?<filename>.+)\z})
+      return unless upload
+
+      File.join(
+        Gitlab.api_endpoint.to_s.chomp("/"),
+        "projects",
+        project["id"].to_s,
+        "uploads",
+        upload[:secret],
+        upload[:filename]
+      )
+    end
+
     private
 
-    # Sometimes GitLab doesn't send over IDs for resources, so we make them up
+    # Sometimes GitLab doesn't send over IDs for resources, so we make them up.
+    #
+    # IMPORTANT: this must be stable across body mutations. Attachable rewrites
+    # the model's body ("note"/"body"/"description") in-place when it extracts
+    # inline /uploads/... links. If we hashed those fields, the URL computed
+    # inside the gsub block (parent_url for the attachment record) would differ
+    # from the URL computed later by Writable#serialize for the parent itself,
+    # leaving every commit-comment attachment orphaned.
+    BODY_KEYS_EXCLUDED_FROM_FAKE_ID = %w[note body description].freeze
+
     def fake_id(model)
-      md5 = Digest::MD5.new
-      md5 << model.to_s
+      nonrewritten_properties = model.reject { |k, _| BODY_KEYS_EXCLUDED_FROM_FAKE_ID.include?(k) }
+      md5 = Digest::MD5.new # rubocop:disable GitHub/InsecureHashAlgorithm
+      md5 << nonrewritten_properties.to_s
       md5.hexdigest
     end
 

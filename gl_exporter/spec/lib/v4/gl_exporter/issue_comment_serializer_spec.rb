@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::IssueCommentSerializer, :v4 do
   let(:issue) do
@@ -29,13 +30,13 @@ describe GlExporter::IssueCommentSerializer, :v4 do
 
     it "returns a serialized Issue hash" do
       expected = {
-        :type => "issue_comment",
-        :url => "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5#note_11735615",
-        :issue => "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5",
-        :user => "https://gitlab.com/jonmagic",
-        :body => %{It looks like https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/1 has already :ship: },
-        :formatter => "markdown",
-        :created_at => "2016-05-10T22:27:02.519Z"
+        type: "issue_comment",
+        url: "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5#note_11735615",
+        issue: "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5",
+        user: "https://gitlab.com/jonmagic",
+        body: %{It looks like https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/1 has already :ship: },
+        formatter: "markdown",
+        created_at: "2016-05-10T22:27:02.519Z"
       }
 
       expected.each do |key, value|
@@ -67,13 +68,13 @@ describe GlExporter::IssueCommentSerializer, :v4 do
 
       it "returns a serialized Pull Request hash" do
         expected = {
-          :type => "issue_comment",
-          :url => "https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/2#note_11735567",
-          :pull_request => "https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/2",
-          :user => "https://gitlab.com/spraints",
-          :body => %{asdfasdfasdfasdfasdf},
-          :formatter => "markdown",
-          :created_at => "2016-05-10T22:20:54.384Z"
+          type: "issue_comment",
+          url: "https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/2#note_11735567",
+          pull_request: "https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/2",
+          user: "https://gitlab.com/spraints",
+          body: %{asdfasdfasdfasdfasdf},
+          formatter: "markdown",
+          created_at: "2016-05-10T22:20:54.384Z"
         }
 
         expected.each do |key, value|

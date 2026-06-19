@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Releases from GitLab's Tags
@@ -43,22 +44,22 @@ class GlExporter
 
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
-     {
-       :type             => "release",
-       :url              => url_for_model(gl_model, type: "release"),
-       :repository       => repository,
-       :user             => user,
-       :name             => name,
-       :tag_name         => tag_name,
-       :body             => body,
-       :state            => "published",
-       :pending_tag      => tag_name,
-       :prerelease       => false,
-       :target_commitish => "master",
-       :release_assets   => [],
-       :published_at     => authored_date,
-       :created_at       => authored_date
-     }
+      {
+        type: "release",
+        url: url_for_model(gl_model, type: "release"),
+        repository: repository,
+        user: user,
+        name: name,
+        tag_name: tag_name,
+        body: body,
+        state: "published",
+        pending_tag: tag_name,
+        prerelease: false,
+        target_commitish: "master",
+        release_assets: [],
+        published_at: authored_date,
+        created_at: authored_date
+      }
     end
 
     private
@@ -80,7 +81,7 @@ class GlExporter
     end
 
     def body
-     gl_model["release"]["description"]
+      gl_model["release"]["description"]
     end
 
     def authored_date

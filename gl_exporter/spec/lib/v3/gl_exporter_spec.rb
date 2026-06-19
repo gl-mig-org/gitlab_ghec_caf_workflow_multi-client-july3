@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter, :v3 do
   let(:exporter) { described_class.new }
@@ -6,7 +7,7 @@ describe GlExporter, :v3 do
   let(:project_locker) { double(GlExporter::ProjectLocker) }
   let(:project) do
     VCR.use_cassette("v3/gitlab-projects/kylemacey/Spoon-Knife") do
-      Gitlab.project('kylemacey', 'Spoon-Knife')
+      Gitlab.project("kylemacey", "Spoon-Knife")
     end
   end
 
@@ -50,7 +51,7 @@ describe GlExporter, :v3 do
 
     it "fetches all repositories for the group" do
       # expect(exporter).to receive(:projects_for_group).with('hackmouse')
-      expect(exporter).to_not receive(:projects_for_user).with('kylemacey')
+      expect(exporter).to_not receive(:projects_for_user).with("kylemacey")
       subject
     end
 
@@ -141,7 +142,7 @@ describe GlExporter, :v3 do
       end
 
       it "does not raise an unhandled error" do
-        expect{subject}.to_not raise_error
+        expect { subject }.to_not raise_error
       end
 
       it "logs a message to the output" do
@@ -160,15 +161,15 @@ describe GlExporter, :v3 do
     subject do
       VCR.use_cassette("v3/gl_exporter/complete_export") do
         GlExporter.new(
-          namespace: 'Mouse-Hack',
-          project: 'hugo-pages',
-          output_path: '/tmp/test_export.tar.gz',
+          namespace: "Mouse-Hack",
+          project: "hugo-pages",
+          output_path: "/tmp/test_export.tar.gz",
         ).export
       end
     end
 
     it "completes an export without error" do
-      expect{subject}.to_not raise_error
+      expect { subject }.to_not raise_error
     end
   end
 
@@ -187,7 +188,7 @@ describe GlExporter, :v3 do
       "10.10",
     ].each do |version|
       it "returns true for version #{version}" do
-        allow(Gitlab).to receive(:version).and_return({"version" => version})
+        allow(Gitlab).to receive(:version).and_return({ "version" => version })
         expect(subject).to eq(true)
       end
     end
@@ -207,8 +208,8 @@ describe GlExporter, :v3 do
       "8.13.0-pre",
     ].each do |version|
       it "raises an error for bad version #{version}" do
-        expect(Gitlab).to receive(:version).and_return({"version" => version})
-        expect{subject}.to raise_error(GlExporter::BadVersion)
+        expect(Gitlab).to receive(:version).and_return({ "version" => version })
+        expect { subject }.to raise_error(GlExporter::BadVersion)
       end
     end
   end

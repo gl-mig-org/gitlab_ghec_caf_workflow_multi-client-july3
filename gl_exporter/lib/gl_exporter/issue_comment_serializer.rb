@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Issue Comments from GitLab's Issue Notes

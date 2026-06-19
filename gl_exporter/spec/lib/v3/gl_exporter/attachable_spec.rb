@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::Attachable, :v3 do
@@ -111,10 +112,10 @@ EOS
       it "logs the error and continues processing" do
         expect(logger).to receive(:error).with(/Failed to extract attachment in issue #55.*Mouse-Hack\/hugo-pages.*\/uploads\/4c34b72a41b3e1b2f9a97fd0c2e50d82\/image\.png.*fix the attachment reference at the source/)
         expect(output_logger).to receive(:error).with(/Failed to extract attachment in issue #55.*Mouse-Hack\/hugo-pages.*\/uploads\/4c34b72a41b3e1b2f9a97fd0c2e50d82\/image\.png.*fix the attachment reference at the source/)
-        
+
         # Should not raise an exception
         expect { pseudo_exporter.extract_attachments("issue", pseudo_model) }.not_to raise_error
-        
+
         # Should return the original text with attachment references intact
         result = pseudo_exporter.extract_attachments("issue", pseudo_model)
         expect(pseudo_model["note"]).to include("[image](/uploads/4c34b72a41b3e1b2f9a97fd0c2e50d82/image.png)")
@@ -125,7 +126,7 @@ EOS
       let(:malformed_body_content) do
         "[specs.docx](/uploads/b573c75d126c851abdc3233![image1](/uploads/b39ee40b3690dcdb74922d5877c6b7f6/image1.JPG)\n\n![image2](/uploads/aed35b01b989d2749edd95979b8c77ce/image2.JPG)\n\n![image13](/uploads/bb3ea9e782b2e2d98635989ee35a6a43/image3.JPG)6ca0ab04f/specs.docx)"
       end
-      
+
       let(:malformed_pseudo_model) do
         PseudoModel.new.tap do |model|
           model["note"] = malformed_body_content
@@ -154,14 +155,14 @@ EOS
         # Should log errors for each valid attachment pattern found
         expect(logger).to receive(:error).with(/Failed to extract attachment in issue #99.*'Malformed attachment test'.*Mouse-Hack\/hugo-pages.*fix the attachment reference at the source/).at_least(:once)
         expect(output_logger).to receive(:error).with(/Failed to extract attachment in issue #99.*'Malformed attachment test'.*Mouse-Hack\/hugo-pages.*fix the attachment reference at the source/).at_least(:once)
-        
+
         # Should not raise an exception despite malformed URLs
         expect { pseudo_exporter.extract_attachments("issue", malformed_pseudo_model) }.not_to raise_error
-        
+
         # Should preserve original text including malformed parts
         result = pseudo_exporter.extract_attachments("issue", malformed_pseudo_model)
         expect(malformed_pseudo_model["note"]).to include("image1.JPG")
-        expect(malformed_pseudo_model["note"]).to include("image2.JPG") 
+        expect(malformed_pseudo_model["note"]).to include("image2.JPG")
         expect(malformed_pseudo_model["note"]).to include("image3.JPG")
       end
     end

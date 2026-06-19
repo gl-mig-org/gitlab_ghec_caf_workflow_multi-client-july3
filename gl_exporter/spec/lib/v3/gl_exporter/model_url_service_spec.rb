@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::ModelUrlService, :v3 do
   subject { described_class.new }
@@ -104,7 +105,7 @@ describe GlExporter::ModelUrlService, :v3 do
     end
 
     it "does not rewrite other namespaces" do
-      model = {"web_url" => "https://gitlab.com/kylemacey/repo-contrib-graph"}
+      model = { "web_url" => "https://gitlab.com/kylemacey/repo-contrib-graph" }
       expect(subject.url_for_model(model)).to_not eq("https://gitlab.com/repo-contrib-graph")
       expect(subject.url_for_model(model)).to eq("https://gitlab.com/kylemacey/repo-contrib-graph")
     end

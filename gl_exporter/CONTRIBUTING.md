@@ -15,7 +15,6 @@ Thanks for bringing up issues to our attention! We value your feedback and would
 
 **DISCLOSURE**: Please note that other GitLab Exporter users will be using this repository. This project will also be publicly distributed as an open source project in the near future. Please do not disclose sensitive information about your migration as you open any issues. Instead, please email sensitive information to services@github.com.
 
-
 ## Submitting a pull request
 
 0. [Fork][fork] and clone the repository
@@ -112,7 +111,7 @@ diff -r shared/repo1-v1.7.9/log/gl-exporter.log shared/repo1-v1.7.10/log/gl-expo
 
 ### 5. Upload Release Artifacts
 1. Package the tarball (`.tar.gz`) and zip (`.zip`).
-2. Upload them to [Google Drive - GitLab Exporter](https://drive.google.com/drive/u/0/folders/15K-FD7sKq0yMabFOMbj2y8IOFHBhxZRx).  
+2. Upload them to [Google Drive - GitLab Exporter](https://drive.google.com/drive/u/0/folders/15K-FD7sKq0yMabFOMbj2y8IOFHBhxZRx).
    Place them alongside previous versions.
 ---
 

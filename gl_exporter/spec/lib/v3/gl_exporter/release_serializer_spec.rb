@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::ReleaseSerializer, :v3 do
   let(:tag) do
@@ -29,20 +30,20 @@ describe GlExporter::ReleaseSerializer, :v3 do
 
     it "returns a serialized release hash" do
       expected = {
-        :type             => "release",
-        :url              => "https://gitlab.com/Mouse-Hack/hugo-pages/tags/end-of-sinatra",
-        :repository       => "https://gitlab.com/Mouse-Hack/hugo-pages",
-        :user             => "https://gitlab.com/u/kylemacey",
-        :name             => "end-of-sinatra",
-        :tag_name         => "end-of-sinatra",
-        :body             => "This is the end of sinatra release.![IMG_1708](/uploads/78cf9f363723223e09785f812c732500/IMG_1708.jpg)",
-        :state            => "published",
-        :pending_tag      => "end-of-sinatra",
-        :prerelease       => false,
-        :target_commitish => "master",
-        :release_assets   => [],
-        :published_at     => "2016-05-10T06:06:10.000-07:00",
-        :created_at       => "2016-05-10T06:06:10.000-07:00"
+        type: "release",
+        url: "https://gitlab.com/Mouse-Hack/hugo-pages/tags/end-of-sinatra",
+        repository: "https://gitlab.com/Mouse-Hack/hugo-pages",
+        user: "https://gitlab.com/u/kylemacey",
+        name: "end-of-sinatra",
+        tag_name: "end-of-sinatra",
+        body: "This is the end of sinatra release.![IMG_1708](/uploads/78cf9f363723223e09785f812c732500/IMG_1708.jpg)",
+        state: "published",
+        pending_tag: "end-of-sinatra",
+        prerelease: false,
+        target_commitish: "master",
+        release_assets: [],
+        published_at: "2016-05-10T06:06:10.000-07:00",
+        created_at: "2016-05-10T06:06:10.000-07:00"
       }
 
       expected.each do |key, value|

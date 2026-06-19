@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Organizations from GitLab's Groups
@@ -18,19 +19,18 @@ class GlExporter
   # ```
   class OrganizationSerializer < BaseSerializer
 
-
-    # @see GlExporter::BaseSerializer#to_gh_hash  
+    # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :type        => "organization",
-        :url         => url_for_model(gl_model, type: "owner"),
-        :login       => gl_model["path"],
-        :name        => gl_model["name"],
-        :description => gl_model["description"],
-        :website     => nil,
-        :location    => nil,
-        :email       => nil,
-        :members     => members
+        type: "organization",
+        url: url_for_model(gl_model, type: "owner"),
+        login: gl_model["path"],
+        name: gl_model["name"],
+        description: gl_model["description"],
+        website: nil,
+        location: nil,
+        email: nil,
+        members: members
       }
     end
 

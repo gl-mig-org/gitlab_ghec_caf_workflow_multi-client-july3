@@ -1,8 +1,9 @@
+# frozen_string_literal: true
 class GlExporter
   class BaseSerializer
     extend Forwardable
 
-    def initialize(options={})
+    def initialize(options = {})
       @model_url_service = options.fetch(:model_url_service) { ModelUrlService.new }
     end
 
@@ -40,12 +41,12 @@ class GlExporter
 
     attr_accessor :gl_model
 
-    def format_timestamp(timestamp, date=false)
+    def format_timestamp(timestamp, date = false)
       return if timestamp.nil?
       time = Time.parse(timestamp).utc
       (date ? time.at_midnight : time).xmlschema
     end
 
-    class InvalidModelProvidedToSerializer < StandardError;end;
+    class InvalidModelProvidedToSerializer < StandardError; end;
   end
 end

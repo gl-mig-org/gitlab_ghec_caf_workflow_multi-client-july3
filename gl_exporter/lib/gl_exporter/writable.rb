@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   module Writable
     # A mapping of models to their serializers
@@ -28,13 +29,19 @@ class GlExporter
     #   not serialized again
     def serialize(model_name, model)
       serializer = Serializers[model_name].new({
-        :model_url_service => model_url_service
+        model_url_service: model_url_service
       })
       model_url = model_url_service.url_for_model(model, type: model_name)
       if !model_url
         current_export.logger.error "#{model_name}: #{model_url} could not be serialized"
         return false
-      elsif archiver.seen?(model_name, model_url)
+      elsif model_name != "attachment" && archiver.seen?(model_name, model_url)
+        # Attachments are intentionally exempt from dedup: a single GitLab upload
+        # referenced from N places (issue body + comment + PR body + ...) must
+        # produce N records, each pointing at a distinct file in the tarball
+        # (the counter-prefixed archive_path). The importer consumes records in
+        # order against body matches and deletes the file after uploading, so
+        # collapsing duplicates leaves later occurrences with empty links.
         current_export.logger.info "#{model_name}: #{model_url} already serialized"
         return false
       else

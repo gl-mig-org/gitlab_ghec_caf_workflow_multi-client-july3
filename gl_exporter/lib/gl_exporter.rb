@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "active_support/cache"
 require "active_support/cache/file_store"
 require "faraday"
@@ -12,6 +13,7 @@ require "tmpdir"
 require "csv"
 require "posix-spawn"
 require "rugged"
+require "marcel"
 require "active_support/core_ext/object/blank"
 require "gl_exporter/project_helpers"
 require "gl_exporter/logging"
@@ -69,7 +71,7 @@ class GlExporter
   OPTIONAL_MODELS = %w{issues merge_requests commit_comments hooks wiki}
   MINIMUM_VERSION = "8.13.0"
 
-  def initialize(options={})
+  def initialize(options = {})
     @options = options
     output_logger.info "Creating working directory in #{staging_dir}"
   end
@@ -127,7 +129,7 @@ class GlExporter
   # @param [String] rel_path relative path to be appended to the project path
   # @return [String] If rel_path is provided, it will return the project path
   #   with rel_path appended. Otherwise, returns the project path
-  def self.path(rel_path=nil)
+  def self.path(rel_path = nil)
     project_path = File.expand_path("../../", __FILE__)
     if rel_path
       File.join(project_path, rel_path)

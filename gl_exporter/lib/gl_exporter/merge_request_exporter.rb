@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   class MergeRequestExporter
     include UserContentRewritable
@@ -35,7 +36,6 @@ class GlExporter
       merge_request["assignee"] && export_user(merge_request["assignee"]["username"])
       prepare_merge_request_notes_for_export(merge_request)
     end
-
 
     # Alias for `merge_request`
     #
@@ -105,14 +105,14 @@ class GlExporter
     end
 
     def export_as_issue
-      serialize("issue", merge_request)
       extract_attachments("issue", merge_request)
+      serialize("issue", merge_request)
       merge_request_notes.each(&:export_as_issue_note)
     end
 
     def export_as_pull_request
-      serialize("pull_request", merge_request)
       extract_attachments("pull_request", merge_request)
+      serialize("pull_request", merge_request)
       merge_request_notes.each(&:export)
     end
 

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module GitlabSpecHelpers
   def with_ssl_verify(value, &block)
     old_ssl_verify = Gitlab.ssl_verify

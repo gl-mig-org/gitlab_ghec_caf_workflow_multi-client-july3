@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Repositories from GitLab's Projects
@@ -59,23 +60,23 @@ class GlExporter
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :type           => "repository",
-        :url            => url,
-        :owner          => owner,
-        :name           => gl_model["name"],
-        :description    => description,
-        :website        => nil,
-        :private        => private?,
-        :has_issues     => gl_model["issues_enabled"],
-        :has_wiki       => has_wiki?,
-        :has_downloads  => has_downloads?,
-        :labels         => labels,
-        :webhooks       => webhooks,
-        :collaborators  => collaborators,
-        :created_at     => gl_model["created_at"],
+        type: "repository",
+        url: url,
+        owner: owner,
+        name: gl_model["name"],
+        description: description,
+        website: nil,
+        private: private?,
+        has_issues: gl_model["issues_enabled"],
+        has_wiki: has_wiki?,
+        has_downloads: has_downloads?,
+        labels: labels,
+        webhooks: webhooks,
+        collaborators: collaborators,
+        created_at: gl_model["created_at"],
         # @todo: Perhaps extract this into some configuration space?
-        :git_url        => git_url,
-        :default_branch => gl_model["default_branch"]
+        git_url: git_url,
+        default_branch: gl_model["default_branch"]
       }.tap do |hash|
         if has_wiki?
           hash[:wiki_url] = wiki_url
@@ -101,15 +102,15 @@ class GlExporter
     end
 
     def description
-      gl_model["description"].to_s.gsub(/[[:cntrl:]]/, " ").gsub(/\s+/, ' ')
+      gl_model["description"].to_s.gsub(/[[:cntrl:]]/, " ").gsub(/\s+/, " ")
     end
 
     def private?
       if Gitlab.api_v3?
-        visibility_level = gl_model['visibility_level']
+        visibility_level = gl_model["visibility_level"]
         visibility_level.zero? || visibility_level.ten?
       else
-        %w[private internal].include?(gl_model.fetch('visibility'))
+        %w[private internal].include?(gl_model.fetch("visibility"))
       end
     end
 
@@ -136,8 +137,10 @@ class GlExporter
     end
 
     def collaborators
-      Array.wrap(gl_model["collaborators"]).map do |project_team_member|
-        CollaboratorSerializer.new.serialize(project_team_member)
+      Array.wrap(gl_model["collaborators"]).filter_map do |project_team_member|
+        serialized = CollaboratorSerializer.new.serialize(project_team_member)
+        # Skip collaborators with nil permissions (unknown access levels)
+        serialized if serialized[:permission]
       end
     end
 

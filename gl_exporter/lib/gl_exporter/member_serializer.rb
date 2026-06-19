@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Organization Members from GitLab's Group Members
@@ -16,15 +17,15 @@ class GlExporter
   class MemberSerializer < BaseSerializer
 
     # Which GitLab access levels are equivalent to GitHub's Organization Owner
-    # role. 
+    # role.
     OWNER_ROLES = [50]
 
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :user => url_for_model(gl_model),
-        :role => role,
-        :state => gl_model["state"]
+        user: url_for_model(gl_model),
+        role: role,
+        state: gl_model["state"]
       }
     end
 

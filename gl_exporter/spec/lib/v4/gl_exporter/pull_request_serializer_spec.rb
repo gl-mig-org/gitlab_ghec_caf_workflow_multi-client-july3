@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::PullRequestSerializer, :v4 do
   let(:merge_request) do
@@ -98,9 +99,9 @@ describe GlExporter::PullRequestSerializer, :v4 do
     end
 
     context "with a squash-merge merge request" do
-      let(:repository) { {"id" => 1, "name" => "test-repo"} }
-      let(:owner) { {"id" => 1, "username" => "test-owner"} }
-      let(:commits) { [{"id" => "commitsha123"}] }
+      let(:repository) { { "id" => 1, "name" => "test-repo" } }
+      let(:owner) { { "id" => 1, "username" => "test-owner" } }
+      let(:commits) { [{ "id" => "commitsha123" }] }
       let(:base_merge_request) do
         {
           "id" => 123,
@@ -113,7 +114,7 @@ describe GlExporter::PullRequestSerializer, :v4 do
           "target_branch" => "master",
           "source_branch" => "feature",
           "labels" => [],
-          "author" => {"username" => "author"},
+          "author" => { "username" => "author" },
           "repository" => repository,
           "owner" => owner,
           "commits" => commits,
@@ -123,11 +124,11 @@ describe GlExporter::PullRequestSerializer, :v4 do
           "squash_commit_sha" => "squashsha123",
         }
       end
-    
-      context 'when commits are empty (this should never happen)' do
+
+      context "when commits are empty (this should never happen)" do
         let(:commits) { [] }
-        
-        it 'gets head SHA from diff_refs' do
+
+        it "gets head SHA from diff_refs" do
           expect(subject[:head][:sha]).to eq(merge_request["diff_refs"]["head_sha"])
         end
 
@@ -150,32 +151,32 @@ describe GlExporter::PullRequestSerializer, :v4 do
         end
       end
 
-      context 'when commits are not empty' do
-        context 'when squash flag is true' do
+      context "when commits are not empty" do
+        context "when squash flag is true" do
           let(:merge_request) { base_merge_request.merge("squash" => true) }
-          
-          it 'head sha is squash_commit_sha' do
+
+          it "head sha is squash_commit_sha" do
             expect(subject[:head][:sha]).to eq(merge_request["squash_commit_sha"])
           end
 
           context "when merge request is unmerged" do
             let(:merge_request) { base_merge_request.merge("state" => "opened", "squash_commit_sha" => nil) }
 
-            it 'head sha is non-nil' do
+            it "head sha is non-nil" do
               expect(subject[:head][:sha].nil?).to be false
             end
           end
         end
-      
-        context 'when squash flag is false' do
+
+        context "when squash flag is false" do
           let(:merge_request) { base_merge_request.merge("squash" => false) }
-          
-          it 'head sha is first commit sha' do
+
+          it "head sha is first commit sha" do
             expect(subject[:head][:sha]).to eq(merge_request["commits"].first["id"])
           end
         end
       end
-    end 
+    end
     it "uses diff_refs to determine base_sha if available" do
       merge_request["diff_refs"] = {
         "base_sha" => "abc123",

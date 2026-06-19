@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "rubygems/package"
 require "tempfile"
 require "zlib"
@@ -14,7 +15,7 @@ class GlExporter
       options = ["-czf", "#{archive_path}", "-C", "#{source_path}", "."]
 
       # On OSX add the --disable-copyfile option to prevent ._ entries.
-      if RbConfig::CONFIG['host_os'].start_with? "darwin"
+      if RbConfig::CONFIG["host_os"].start_with? "darwin"
         options.unshift("--disable-copyfile")
       end
 
@@ -40,7 +41,7 @@ class GlExporter
 
       if block_given? && File.exist?(destination_path)
         yield
-        FileUtils.rm_rf(destination_path, :secure => true)
+        FileUtils.rm_rf(destination_path, secure: true)
         return nil
       else
         return destination_path

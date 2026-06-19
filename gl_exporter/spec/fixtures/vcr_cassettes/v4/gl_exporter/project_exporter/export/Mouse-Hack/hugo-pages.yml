@@ -91,7 +91,7 @@ http_interactions:
     body:
       encoding: UTF-8
       string: "[]"
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:48 GMT
 - request:
     method: get
@@ -199,7 +199,7 @@ http_interactions:
         use something other than jekyll? Try this one weird trick. er, actually a
         bunch of tricks, glued together.","name":"hugo-pages","name_with_namespace":"Mouse-Hack
         / hugo-pages","path":"hugo-pages","path_with_namespace":"Mouse-Hack/hugo-pages","created_at":"2016-05-10T21:15:14.616Z","default_branch":"master","tag_list":[],"topics":[],"ssh_url_to_repo":"git@gitlab.com:Mouse-Hack/hugo-pages.git","http_url_to_repo":"https://gitlab.com/Mouse-Hack/hugo-pages.git","web_url":"https://gitlab.com/Mouse-Hack/hugo-pages","readme_url":"https://gitlab.com/Mouse-Hack/hugo-pages/-/blob/master/README.md","avatar_url":null,"forks_count":1,"star_count":0,"last_activity_at":"2020-08-10T16:21:24.171Z","namespace":{"id":627189,"name":"Mouse-Hack","path":"Mouse-Hack","kind":"group","full_path":"Mouse-Hack","parent_id":null,"avatar_url":null,"web_url":"https://gitlab.com/groups/Mouse-Hack"},"container_registry_image_prefix":"registry.gitlab.com/mouse-hack/hugo-pages","_links":{"self":"https://gitlab.com/api/v4/projects/1169162","issues":"https://gitlab.com/api/v4/projects/1169162/issues","merge_requests":"https://gitlab.com/api/v4/projects/1169162/merge_requests","repo_branches":"https://gitlab.com/api/v4/projects/1169162/repository/branches","labels":"https://gitlab.com/api/v4/projects/1169162/labels","events":"https://gitlab.com/api/v4/projects/1169162/events","members":"https://gitlab.com/api/v4/projects/1169162/members","cluster_agents":"https://gitlab.com/api/v4/projects/1169162/cluster_agents"},"packages_enabled":null,"empty_repo":false,"archived":false,"visibility":"private","resolve_outdated_diff_discussions":null,"issues_enabled":true,"merge_requests_enabled":true,"wiki_enabled":true,"jobs_enabled":true,"snippets_enabled":false,"container_registry_enabled":false,"service_desk_enabled":null,"service_desk_address":"contact-project+mouse-hack-hugo-pages-1169162-issue-@incoming.gitlab.com","can_create_merge_request_in":true,"issues_access_level":"enabled","repository_access_level":"enabled","merge_requests_access_level":"enabled","forking_access_level":"enabled","wiki_access_level":"private","builds_access_level":"enabled","snippets_access_level":"disabled","pages_access_level":"public","operations_access_level":"enabled","analytics_access_level":"enabled","container_registry_access_level":"disabled","security_and_compliance_access_level":"private","emails_disabled":null,"shared_runners_enabled":true,"lfs_enabled":true,"creator_id":142189,"import_url":"","import_type":null,"import_status":"none","open_issues_count":7,"ci_default_git_depth":null,"ci_forward_deployment_enabled":null,"ci_job_token_scope_enabled":false,"public_jobs":true,"build_timeout":3600,"auto_cancel_pending_pipelines":"enabled","ci_config_path":null,"shared_with_groups":[{"group_id":627189,"group_name":"Mouse-Hack","group_full_path":"Mouse-Hack","group_access_level":30,"expires_at":null}],"only_allow_merge_if_pipeline_succeeds":false,"allow_merge_on_skipped_pipeline":null,"restrict_user_defined_variables":false,"request_access_enabled":true,"only_allow_merge_if_all_discussions_are_resolved":null,"remove_source_branch_after_merge":null,"printing_merge_request_link_enabled":true,"merge_method":"merge","squash_option":"default_off","enforce_auth_checks_on_uploads":true,"suggestion_commit_message":null,"merge_commit_template":null,"squash_commit_template":null,"auto_devops_enabled":false,"auto_devops_deploy_strategy":"continuous","autoclose_referenced_issues":true,"keep_latest_artifact":true,"runner_token_expiration_interval":null,"external_authorization_classification_label":"","requirements_enabled":false,"requirements_access_level":"enabled","security_and_compliance_enabled":true,"compliance_frameworks":[]}],"shared_runners_minutes_limit":400,"extra_shared_runners_minutes_limit":null,"prevent_forking_outside_group":null,"membership_lock":false}'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:49 GMT
 - request:
     method: get
@@ -292,8 +292,8 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints","access_level":50,"created_at":"2016-05-10T22:02:36.802Z","expires_at":null,"membership_state":"active"},{"id":529946,"username":"jonmagic","name":"Jon
-        Magic","state":"active","avatar_url":"https://secure.gravatar.com/avatar/7064ad438246a02809c85bcd92cb5f3f?s=80\u0026d=identicon","web_url":"https://gitlab.com/jonmagic","access_level":30,"created_at":"2016-05-10T22:05:01.956Z","created_by":{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"},"expires_at":null,"membership_state":"active"},{"id":529949,"username":"lizzhale","name":"Lizz","state":"active","avatar_url":"https://secure.gravatar.com/avatar/d36cdb93d0f85b5d7b76a183834d4350?s=80\u0026d=identicon","web_url":"https://gitlab.com/lizzhale","access_level":20,"created_at":"2016-05-10T22:05:18.595Z","created_by":{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"},"expires_at":null,"membership_state":"active"},{"id":47125,"username":"ehale","name":"Lizz
-        Hale","state":"active","avatar_url":"https://secure.gravatar.com/avatar/12732e93949b0450ff987ae2d409a261?s=80\u0026d=identicon","web_url":"https://gitlab.com/ehale","access_level":10,"created_at":"2016-05-10T22:05:28.225Z","created_by":{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"},"expires_at":null,"membership_state":"active"},{"id":417001,"username":"mattcantstop","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/9c1fb6cb9d54ce36a84cca0aa4567ea3?s=80\u0026d=identicon","web_url":"https://gitlab.com/mattcantstop","access_level":30,"created_at":"2017-01-13T20:55:39.023Z","expires_at":null,"membership_state":"active"},{"id":1238984,"username":"dpmex4527","name":"Daniel
+        Magic","state":"active","avatar_url":"https://secure.gravatar.com/avatar/7064ad438246a02809c85bcd92cb5f3f?s=80\u0026d=identicon","web_url":"https://gitlab.com/jonmagic","access_level":30,"created_at":"2016-05-10T22:05:01.956Z","created_by":{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"},"expires_at":null,"membership_state":"active"},{"id":529949,"username":"lizzhale","name":"Lizz","state":"active","avatar_url":"https://secure.gravatar.com/avatar/d36cdb93d0f85b5d7b76a183834d4350?s=80\u0026d=identicon","web_url":"https://gitlab.com/lizzhale","access_level":15,"created_at":"2016-05-10T22:05:18.595Z","created_by":{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"},"expires_at":null,"membership_state":"active"},{"id":47125,"username":"ehale","name":"Lizz
+        Hale","state":"active","avatar_url":"https://secure.gravatar.com/avatar/12732e93949b0450ff987ae2d409a261?s=80\u0026d=identicon","web_url":"https://gitlab.com/ehale","access_level":5,"created_at":"2016-05-10T22:05:28.225Z","created_by":{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"},"expires_at":null,"membership_state":"active"},{"id":417001,"username":"mattcantstop","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/9c1fb6cb9d54ce36a84cca0aa4567ea3?s=80\u0026d=identicon","web_url":"https://gitlab.com/mattcantstop","access_level":30,"created_at":"2017-01-13T20:55:39.023Z","expires_at":null,"membership_state":"active"},{"id":1238984,"username":"dpmex4527","name":"Daniel
         Perez","state":"active","avatar_url":"https://secure.gravatar.com/avatar/47338cb6ea1c84bfd0bbafd6a1298f3d?s=80\u0026d=identicon","web_url":"https://gitlab.com/dpmex4527","access_level":50,"created_at":"2017-04-04T20:01:36.987Z","created_by":{"id":414903,"username":"kylemacey","name":"Kyle
         Macey","state":"active","avatar_url":"https://secure.gravatar.com/avatar/e7bc3ce1dbb0fcaa9bb00bf10628526e?s=80\u0026d=identicon","web_url":"https://gitlab.com/kylemacey"},"expires_at":null,"membership_state":"active"},{"id":1477621,"username":"synthead","name":"Maxwell
         Pray","state":"active","avatar_url":"https://gitlab.com/uploads/-/system/user/avatar/1477621/avatar.png","web_url":"https://gitlab.com/synthead","access_level":50,"created_at":"2017-07-21T19:14:44.309Z","created_by":{"id":414903,"username":"kylemacey","name":"Kyle
@@ -315,8 +315,8 @@ http_interactions:
         Mrad","state":"active","avatar_url":"https://secure.gravatar.com/avatar/ff1e655f9db995b258c0816095051554?s=80\u0026d=identicon","web_url":"https://gitlab.com/juanmrad","access_level":50,"created_at":"2022-02-23T15:37:24.753Z","created_by":{"id":1238984,"username":"dpmex4527","name":"Daniel
         Perez","state":"active","avatar_url":"https://secure.gravatar.com/avatar/47338cb6ea1c84bfd0bbafd6a1298f3d?s=80\u0026d=identicon","web_url":"https://gitlab.com/dpmex4527"},"expires_at":null,"membership_state":"active"},{"id":11057002,"username":"gohana","name":"Ginny
         Ohana","state":"active","avatar_url":"https://secure.gravatar.com/avatar/8454e82518cd7a7ab8dfd572628501ca?s=80\u0026d=identicon","web_url":"https://gitlab.com/gohana","access_level":50,"created_at":"2022-03-07T22:32:31.348Z","created_by":{"id":1238984,"username":"dpmex4527","name":"Daniel
-        Perez","state":"active","avatar_url":"https://secure.gravatar.com/avatar/47338cb6ea1c84bfd0bbafd6a1298f3d?s=80\u0026d=identicon","web_url":"https://gitlab.com/dpmex4527"},"expires_at":null,"membership_state":"active"}]'
-    http_version: 
+        Perez","state":"active","avatar_url":"https://secure.gravatar.com/avatar/47338cb6ea1c84bfd0bbafd6a1298f3d?s=80\u0026d=identicon","web_url":"https://gitlab.com/dpmex4527"},"expires_at":null,"membership_state":"active"},{"id":99999999,"username":"unknownaccess","name":"Unknown Access User","state":"active","avatar_url":"https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=80\u0026d=identicon","web_url":"https://gitlab.com/unknownaccess","access_level":9999,"created_at":"2022-03-07T22:32:31.348Z","expires_at":null,"membership_state":"active"}]'
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:50 GMT
 - request:
     method: get
@@ -409,7 +409,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":142189,"username":"spraints","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/0bf208eebdab7c5d16152f70a1ee837f?s=80\u0026d=identicon","web_url":"https://gitlab.com/spraints"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:50 GMT
 - request:
     method: get
@@ -502,7 +502,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":529946,"username":"jonmagic","name":"Jon Magic","state":"active","avatar_url":"https://secure.gravatar.com/avatar/7064ad438246a02809c85bcd92cb5f3f?s=80\u0026d=identicon","web_url":"https://gitlab.com/jonmagic"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:50 GMT
 - request:
     method: get
@@ -595,7 +595,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":529949,"username":"lizzhale","name":"Lizz","state":"active","avatar_url":"https://secure.gravatar.com/avatar/d36cdb93d0f85b5d7b76a183834d4350?s=80\u0026d=identicon","web_url":"https://gitlab.com/lizzhale"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:50 GMT
 - request:
     method: get
@@ -688,7 +688,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":47125,"username":"ehale","name":"Lizz Hale","state":"active","avatar_url":"https://secure.gravatar.com/avatar/12732e93949b0450ff987ae2d409a261?s=80\u0026d=identicon","web_url":"https://gitlab.com/ehale"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:50 GMT
 - request:
     method: get
@@ -781,7 +781,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":417001,"username":"mattcantstop","name":"Matt","state":"active","avatar_url":"https://secure.gravatar.com/avatar/9c1fb6cb9d54ce36a84cca0aa4567ea3?s=80\u0026d=identicon","web_url":"https://gitlab.com/mattcantstop"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:51 GMT
 - request:
     method: get
@@ -874,7 +874,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":1238984,"username":"dpmex4527","name":"Daniel Perez","state":"active","avatar_url":"https://secure.gravatar.com/avatar/47338cb6ea1c84bfd0bbafd6a1298f3d?s=80\u0026d=identicon","web_url":"https://gitlab.com/dpmex4527"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:51 GMT
 - request:
     method: get
@@ -967,7 +967,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":1477621,"username":"synthead","name":"Maxwell Pray","state":"active","avatar_url":"https://gitlab.com/uploads/-/system/user/avatar/1477621/avatar.png","web_url":"https://gitlab.com/synthead"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:51 GMT
 - request:
     method: get
@@ -1060,7 +1060,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":230654,"username":"Hollyw0od99","name":"Jon","state":"active","avatar_url":"https://secure.gravatar.com/avatar/ee249c7058d299d3f7de861a60cf9089?s=80\u0026d=identicon","web_url":"https://gitlab.com/Hollyw0od99"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:51 GMT
 - request:
     method: get
@@ -1153,7 +1153,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":3201226,"username":"tambling","name":"Dean Tambling","state":"active","avatar_url":"https://secure.gravatar.com/avatar/7d0e7c78e59e938af8a20e2d3087783d?s=80\u0026d=identicon","web_url":"https://gitlab.com/tambling"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:52 GMT
 - request:
     method: get
@@ -1246,7 +1246,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":151676,"username":"jfine","name":"Jared Fine","state":"active","avatar_url":"https://secure.gravatar.com/avatar/4acd2c4fc6602ab61e42c79bf255223b?s=80\u0026d=identicon","web_url":"https://gitlab.com/jfine"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:52 GMT
 - request:
     method: get
@@ -1339,7 +1339,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":3573556,"username":"admiralawkbar","name":"Lucas Gravley","state":"active","avatar_url":"https://gitlab.com/uploads/-/system/user/avatar/3573556/avatar.png","web_url":"https://gitlab.com/admiralawkbar"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:52 GMT
 - request:
     method: get
@@ -1432,7 +1432,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":5098153,"username":"mechashark-test","name":"mechashark-test","state":"active","avatar_url":"https://secure.gravatar.com/avatar/179c26717a76b6ad5b332c98769f0abb?s=80\u0026d=identicon","web_url":"https://gitlab.com/mechashark-test"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:52 GMT
 - request:
     method: get
@@ -1525,7 +1525,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":5603153,"username":"keerthanakumar","name":"Keerthana Kumar","state":"active","avatar_url":"https://secure.gravatar.com/avatar/594e8bb8e7a9de1b020adb9e01fe5de3?s=80\u0026d=identicon","web_url":"https://gitlab.com/keerthanakumar"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:52 GMT
 - request:
     method: get
@@ -1618,7 +1618,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":5757263,"username":"brianaj","name":"Briana Johnson","state":"active","avatar_url":"https://secure.gravatar.com/avatar/141e4b729f55806f7f3cd296f4f10285?s=80\u0026d=identicon","web_url":"https://gitlab.com/brianaj"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:53 GMT
 - request:
     method: get
@@ -1711,7 +1711,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":5764000,"username":"iomekam","name":"Ikenna Omekam","state":"active","avatar_url":"https://secure.gravatar.com/avatar/395de5dab907d6b535266a9e971dc82e?s=80\u0026d=identicon","web_url":"https://gitlab.com/iomekam"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:53 GMT
 - request:
     method: get
@@ -1804,7 +1804,7 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":8773507,"username":"juanmrad","name":"Juan Mrad","state":"active","avatar_url":"https://secure.gravatar.com/avatar/ff1e655f9db995b258c0816095051554?s=80\u0026d=identicon","web_url":"https://gitlab.com/juanmrad"}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:53 GMT
 - request:
     method: get
@@ -1897,7 +1897,100 @@ http_interactions:
     body:
       encoding: ASCII-8BIT
       string: '[{"id":11057002,"username":"gohana","name":"Ginny Ohana","state":"active","avatar_url":"https://secure.gravatar.com/avatar/8454e82518cd7a7ab8dfd572628501ca?s=80\u0026d=identicon","web_url":"https://gitlab.com/gohana"}]'
-    http_version: 
+    http_version:
+  recorded_at: Fri, 06 May 2022 16:12:53 GMT
+- request:
+    method: get
+    uri: https://gitlab.com/api/v4/users?username=unknownaccess
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Private-Token:
+      - "<API_TOKEN>"
+      User-Agent:
+      - Faraday v0.17.3
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Fri, 06 May 2022 16:12:53 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Etag:
+      - W/"f0fba4609b099d57216b888937027996"
+      Link:
+      - <https://gitlab.com/api/v4/users?active=false&admins=false&blocked=false&external=false&page=1&per_page=20&skip_ldap=false&username=unknownaccess&with_custom_attributes=false&without_project_bots=false>;
+        rel="first", <https://gitlab.com/api/v4/users?active=false&admins=false&blocked=false&external=false&page=1&per_page=20&skip_ldap=false&username=unknownaccess&with_custom_attributes=false&without_project_bots=false>;
+        rel="last"
+      Vary:
+      - Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Next-Page:
+      - ''
+      X-Page:
+      - '1'
+      X-Per-Page:
+      - '20'
+      X-Prev-Page:
+      - ''
+      X-Request-Id:
+      - 01G2D2AFGHDF6DD09VQVPT7P4Z
+      X-Runtime:
+      - '0.098806'
+      X-Total:
+      - '1'
+      X-Total-Pages:
+      - '1'
+      Strict-Transport-Security:
+      - max-age=31536000
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Ratelimit-Observed:
+      - '16'
+      Ratelimit-Remaining:
+      - '1984'
+      Ratelimit-Reset:
+      - '1651853633'
+      Ratelimit-Resettime:
+      - Fri, 06 May 2022 16:13:53 GMT
+      Ratelimit-Limit:
+      - '2000'
+      Gitlab-Lb:
+      - fe-16-lb-gprd
+      Gitlab-Sv:
+      - localhost
+      Cf-Cache-Status:
+      - DYNAMIC
+      Expect-Ct:
+      - max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Report-To:
+      - '{"endpoints":[{"url":"https:\/\/a.nel.cloudflare.com\/report\/v3?s=FifP8%2B8hpePf3WtmowMLNjZpQKmLhLdCfmrn0Qui2nm3RzRi8%2B4ibKudGngiceyj7N2a8GCifyMMJgD60lCKZBbArT2Va%2FI46gjofZQ42yaJDJjqFhDAvU9lPss%3D"}],"group":"cf-nel","max_age":604800}'
+      Nel:
+      - '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}'
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 70730002da49dde8-SEA
+    body:
+      encoding: ASCII-8BIT
+      string: '[{"id":99999999,"username":"unknownaccess","name":"Unknown Access User","state":"active","avatar_url":"https://secure.gravatar.com/avatar/00000000000000000000000000000000?s=80\u0026d=identicon","web_url":"https://gitlab.com/unknownaccess"}]'
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:53 GMT
 - request:
     method: get
@@ -1993,6 +2086,6 @@ http_interactions:
         please send help.","description_html":"I''m currently blocked, please send
         help.","text_color":"#333333","color":"#a295d6","subscribed":false,"priority":null,"is_project_label":true},{"id":248627,"name":"Bug","description":"","description_html":"","text_color":"#FFFFFF","color":"#ff0000","subscribed":false,"priority":null,"is_project_label":true},{"id":252887,"name":"Don''t
         Drink and Code","description":"","description_html":null,"text_color":"#FFFFFF","color":"#ad8d43","subscribed":false,"priority":null,"is_project_label":true}]'
-    http_version: 
+    http_version:
   recorded_at: Fri, 06 May 2022 16:12:54 GMT
 recorded_with: VCR 3.0.3

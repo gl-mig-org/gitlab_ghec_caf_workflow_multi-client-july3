@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   module ProjectHelpers
     def org_from_path_with_namespace(path_with_namespace)

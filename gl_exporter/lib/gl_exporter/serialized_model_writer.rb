@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "active_support/inflector/inflections"
 
 class GlExporter
@@ -33,7 +34,7 @@ class GlExporter
         self.count = 0
       end
     end
-    
+
     # The current archive file.
     def fh
       @fh ||= File.open(build_filename, "w")

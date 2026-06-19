@@ -1,13 +1,15 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 require "tmpdir"
 require "fileutils"
 
 describe GlExporter::SerializedModelWriter, :v4 do
-  let(:data) {{
+  let(:data) { {
     "something" => "this is a thing",
     "something2" => "this is also a thing"
-  }}
+  }
+  }
   let(:dir) { Dir.mktmpdir("gl-export-test") }
   let(:subject) { GlExporter::SerializedModelWriter.new(dir, "organizations") }
 

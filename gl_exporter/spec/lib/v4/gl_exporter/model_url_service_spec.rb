@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::ModelUrlService, :v4 do
   subject { described_class.new }
@@ -97,14 +98,30 @@ describe GlExporter::ModelUrlService, :v4 do
       expect(subject.url_for_model(milestone, type: "milestone")).to eq("https://gitlab.com/Mouse-Hack/hugo-pages/milestones/1")
     end
 
-    it "returns a gitlab url for an commit comment" do
+    it "returns a gitlab url for a commit comment" do
       commit_comment["repository"] = project
       commit_comment["commit"] = commit
-      expect(subject.url_for_model(commit_comment, type: "commit_comment")).to eq("https://gitlab.com/Mouse-Hack/hugo-pages/commit/220d5dc2582a49d694c503abdb8cf25bcdd81dce#note_10b658e747cf610dd8519662f1b0a763")
+      # The note id is a fake_id (MD5) computed from the model with body keys
+      # excluded. Asserting on the shape (not the literal digest) keeps this
+      # test resilient to unrelated additions in the commit_comment fixture.
+      expect(subject.url_for_model(commit_comment, type: "commit_comment")).to match(
+        %r{\Ahttps://gitlab\.com/Mouse-Hack/hugo-pages/commit/220d5dc2582a49d694c503abdb8cf25bcdd81dce#note_[0-9a-f]{32}\z}
+      )
+    end
+
+    it "returns a stable commit_comment url across in-place body mutation" do
+      commit_comment["repository"] = project
+      commit_comment["commit"] = commit
+
+      before_mutation = subject.url_for_model(commit_comment, type: "commit_comment")
+      commit_comment["note"] = "completely rewritten body"
+      after_mutation = subject.url_for_model(commit_comment, type: "commit_comment")
+
+      expect(after_mutation).to eq(before_mutation)
     end
 
     it "does not rewrite other namespaces" do
-      model = {"web_url" => "https://gitlab.com/kylemacey/repo-contrib-graph"}
+      model = { "web_url" => "https://gitlab.com/kylemacey/repo-contrib-graph" }
       expect(subject.url_for_model(model)).to_not eq("https://gitlab.com/repo-contrib-graph")
       expect(subject.url_for_model(model)).to eq("https://gitlab.com/kylemacey/repo-contrib-graph")
     end

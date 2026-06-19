@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::AttachmentSerializer, :v3 do
   let(:merge_request) do
@@ -33,14 +34,14 @@ describe GlExporter::AttachmentSerializer, :v3 do
 
     it "returns a serialized attachment hash" do
       expected = {
-          :type => "attachment",
-          :url => "https://gitlab.com/Mouse-Hack/hugo-pages/uploads/9ac59438bec5a5e130f6c5c502a34713/image.png",
-          :pull_request => "https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/2",
-          :user => "https://gitlab.com/u/spraints",
-          :asset_name => "image.png",
-          :asset_content_type => "image/png",
-          :asset_url => "tarball://root/attachments/uploads/9ac59438bec5a5e130f6c5c502a34713/image.png",
-          :created_at => "2016-05-10T22:20:29.649Z"
+          type: "attachment",
+          url: "https://gitlab.com/Mouse-Hack/hugo-pages/uploads/9ac59438bec5a5e130f6c5c502a34713/image.png",
+          pull_request: "https://gitlab.com/Mouse-Hack/hugo-pages/merge_requests/2",
+          user: "https://gitlab.com/u/spraints",
+          asset_name: "image.png",
+          asset_content_type: "image/png",
+          asset_url: "tarball://root/attachments/uploads/9ac59438bec5a5e130f6c5c502a34713/image.png",
+          created_at: "2016-05-10T22:20:29.649Z"
         }
 
       expected.each do |key, value|

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Users from GitLab's Users
@@ -32,19 +33,18 @@ class GlExporter
   # ```
   class UserSerializer < BaseSerializer
 
-
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :type       => "user",
-        :url        => url_for_model(gl_model),
-        :login      => gl_model["username"],
-        :name       => gl_model["name"],
-        :company    => nil,
-        :website    => gl_model["website_url"],
-        :location   => nil,
-        :emails     => emails,
-        :created_at => gl_model["created_at"]
+        type: "user",
+        url: url_for_model(gl_model),
+        login: gl_model["username"],
+        name: gl_model["name"],
+        company: nil,
+        website: gl_model["website_url"],
+        location: nil,
+        emails: emails,
+        created_at: gl_model["created_at"]
       }
     end
 
@@ -52,7 +52,7 @@ class GlExporter
 
     def emails
       if email = gl_model["email"]
-        [{"address" => email, "primary" => true}]
+        [{ "address" => email, "primary" => true }]
       else
         []
       end

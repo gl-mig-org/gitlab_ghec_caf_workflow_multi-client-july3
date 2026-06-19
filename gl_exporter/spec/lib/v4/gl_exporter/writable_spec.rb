@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::Writable, :v4 do
@@ -59,6 +60,39 @@ describe GlExporter::Writable, :v4 do
         )
 
         pseudo_exporter.serialize("user", nil)
+      end
+    end
+
+    context "when the model is an attachment" do
+      # A single GitLab upload can be referenced from multiple places (issue
+      # body, comments, merge request body, ...). Each occurrence is given a
+      # distinct archive_path by Attachable, so dedup-by-url must NOT collapse
+      # them — otherwise later occurrences end up pointing at a file the
+      # importer has already consumed and deleted.
+      let(:attachment_serializer) { double GlExporter::AttachmentSerializer }
+      let(:attachment_model) do
+        {
+          "type"         => "issue",
+          "model"        => pseudo_model,
+          "repository"   => { "web_url" => "http://hostname.com/path" },
+          "attach_path"  => "/uploads/abc/file.png",
+          "archive_path" => "/uploads/abc/1_file.png",
+        }
+      end
+
+      before(:each) do
+        allow(GlExporter::AttachmentSerializer).to receive(:new).and_return(attachment_serializer)
+        allow(attachment_serializer).to receive(:serialize)
+        allow(archiver).to receive(:write)
+        allow(archiver).to receive(:seen)
+      end
+
+      it "writes the record even when the same url has been seen before" do
+        allow(archiver).to receive(:seen?).and_return(true)
+
+        expect(archiver).to receive(:write).twice
+        expect(pseudo_exporter.serialize("attachment", attachment_model)).to eq(true)
+        expect(pseudo_exporter.serialize("attachment", attachment_model)).to eq(true)
       end
     end
   end

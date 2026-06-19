@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 require "active_support/isolated_execution_state"
 
@@ -39,7 +40,7 @@ describe GlExporter::ProjectExporter, :v4 do
 
   describe "#export" do
     subject do
-      VCR.use_cassette("v4/gl_exporter/project_exporter/export/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gl_exporter/project_exporter/export/#{project['path_with_namespace']}") do
         project_exporter.export
       end
     end
@@ -73,7 +74,7 @@ describe GlExporter::ProjectExporter, :v4 do
     end
 
     context "with selective export excluding commit comments" do
-      let(:gl_exporter) { GlExporter.new(models: %w(issues merge_requests hooks wiki)) }
+      let(:gl_exporter) { GlExporter.new(models: %w[issues merge_requests hooks wiki]) }
 
       it "exports only the provided models" do
         expect(project_exporter).to receive(:export_issues)
@@ -88,7 +89,7 @@ describe GlExporter::ProjectExporter, :v4 do
     end
 
     context "with selective export excluding issues" do
-      let(:gl_exporter) { GlExporter.new(models: %w(merge_requests commit_comments hooks wiki)) }
+      let(:gl_exporter) { GlExporter.new(models: %w[merge_requests commit_comments hooks wiki]) }
 
       it "exports only the provided models" do
         expect(project_exporter).to_not receive(:export_issues)
@@ -103,7 +104,7 @@ describe GlExporter::ProjectExporter, :v4 do
     end
 
     context "with selective export excluding merge requests" do
-      let(:gl_exporter) { GlExporter.new(models: %w(issues commit_comments hooks wiki)) }
+      let(:gl_exporter) { GlExporter.new(models: %w[issues commit_comments hooks wiki]) }
 
       it "exports only the provided models" do
         expect(project_exporter).to receive(:export_issues)
@@ -118,7 +119,7 @@ describe GlExporter::ProjectExporter, :v4 do
     end
 
     context "with selective export excluding hooks" do
-      let(:gl_exporter) { GlExporter.new(models: %w(issues commit_comments merge_requests wiki)) }
+      let(:gl_exporter) { GlExporter.new(models: %w[issues commit_comments merge_requests wiki]) }
 
       it "exports only the provided models" do
         expect(project_exporter).to receive(:export_issues)
@@ -133,7 +134,7 @@ describe GlExporter::ProjectExporter, :v4 do
     end
 
     context "with selective export excluding wiki" do
-      let(:gl_exporter) { GlExporter.new(models: %w(issues commit_comments merge_requests hooks)) }
+      let(:gl_exporter) { GlExporter.new(models: %w[issues commit_comments merge_requests hooks]) }
 
       it "exports only the provided models" do
         expect(project_exporter).to receive(:export_issues)
@@ -202,6 +203,42 @@ describe GlExporter::ProjectExporter, :v4 do
         expect(project_exporter).to receive(:renumber_issues_and_merge_requests)
           .with(skip: :merge_requests)
         subject
+      end
+    end
+
+    context "with members having Minimal (5) and Planner (15) access levels" do
+      let(:logger) { instance_double(Logger) }
+
+      before do
+        allow(gl_exporter).to receive(:output_logger).and_return(logger)
+        allow(logger).to receive(:info)
+        allow(logger).to receive(:warn)
+      end
+
+      it "logs a warning when upgrading Minimal access to Guest" do
+        subject
+
+        expect(logger).to have_received(:warn).with(
+          "Upgrading access level for member 'ehale' in 'Mouse-Hack': Minimal access (5) -> Guest (10) (permission: read)"
+        )
+      end
+
+      it "logs a warning when downgrading Planner access to Guest" do
+        subject
+
+        expect(logger).to have_received(:warn).with(
+          "Downgrading access level for member 'lizzhale' in 'Mouse-Hack': Planner (15) -> Guest (10) (permission: read)"
+        )
+      end
+      it "logs a warning for unknown access level and skips the member" do
+        subject
+
+        expect(logger).to have_received(:warn).with(
+          "Unknown access level 9999 for member 'unknownaccess' in 'Mouse-Hack'. This member will be skipped."
+        )
+        expect(logger).to have_received(:warn).with(
+          "Skipping team membership for 'unknownaccess' in 'Mouse-Hack' due to invalid access level 9999"
+        )
       end
     end
   end
@@ -273,7 +310,7 @@ describe GlExporter::ProjectExporter, :v4 do
 
   describe "#export_owner_of_project" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-owner/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
         project_exporter.export_owner_of_project
       end
     end
@@ -281,7 +318,7 @@ describe GlExporter::ProjectExporter, :v4 do
     context "when project is owned by a user" do
       let(:project) do
         VCR.use_cassette("v4/gitlab-projects/kylemacey/Spoon-Knife") do
-          Gitlab.project('kylemacey', 'Spoon-Knife')
+          Gitlab.project("kylemacey", "Spoon-Knife")
         end
       end
 
@@ -307,6 +344,213 @@ describe GlExporter::ProjectExporter, :v4 do
         subject
       end
     end
+
+    context "when namespace is initially nil" do
+      let(:project_with_nil_namespace) do
+        project.dup.tap { |p| p["namespace"] = nil }
+      end
+      let(:project_exporter) { described_class.new(project_with_nil_namespace, current_export: gl_exporter) }
+
+      before do
+        allow(project_exporter).to receive(:sleep) # Skip delays in tests
+        allow(project_exporter).to receive(:export_group)
+      end
+
+      it "retries fetching the project when namespace is nil" do
+        VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
+          expect(Gitlab).to receive(:project_by_id).with(project["id"]).and_return(project)
+          project_exporter.export_owner_of_project
+        end
+      end
+
+      it "logs a warning when namespace is missing" do
+        logger = instance_double(Logger)
+        allow(gl_exporter).to receive(:output_logger).and_return(logger)
+        allow(logger).to receive(:info)
+        allow(logger).to receive(:error)
+        expect(logger).to receive(:warn).with(/has missing namespace field/)
+        VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
+          allow(Gitlab).to receive(:project_by_id).with(project["id"]).and_return(project)
+          project_exporter.export_owner_of_project
+        end
+      end
+
+      it "logs the malformed payload" do
+        logger = instance_double(Logger)
+        allow(gl_exporter).to receive(:output_logger).and_return(logger)
+        allow(logger).to receive(:info)
+        allow(logger).to receive(:warn)
+        expect(logger).to receive(:error).with(/Malformed project payload/)
+        VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
+          allow(Gitlab).to receive(:project_by_id).with(project["id"]).and_return(project)
+          project_exporter.export_owner_of_project
+        end
+      end
+
+      it "succeeds when retry returns valid namespace" do
+        VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
+          expect(Gitlab).to receive(:project_by_id).with(project["id"]).and_return(project)
+          expect { project_exporter.export_owner_of_project }.not_to raise_error
+        end
+      end
+
+      context "when all retries fail" do
+        before do
+          allow(Gitlab).to receive(:project_by_id).and_return(project_with_nil_namespace)
+        end
+
+        it "raises MissingNamespaceError after exhausting retries" do
+          expect { project_exporter.export_owner_of_project }.to raise_error(
+            GlExporter::ProjectExporter::MissingNamespaceError,
+            /GitLab returned project without namespace field after 3 retry attempts/
+          )
+        end
+
+        it "includes project details in the error message" do
+          expect { project_exporter.export_owner_of_project }.to raise_error do |error|
+            expect(error.message).to include(project["id"].to_s)
+          end
+        end
+      end
+
+      context "when retry succeeds on second attempt" do
+        before do
+          call_count = 0
+          allow(Gitlab).to receive(:project_by_id) do
+            call_count += 1
+            call_count == 1 ? project_with_nil_namespace : project
+          end
+        end
+
+        it "succeeds after retry" do
+          VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
+            expect { project_exporter.export_owner_of_project }.not_to raise_error
+          end
+        end
+
+        it "logs success message" do
+          logger = instance_double(Logger)
+          allow(gl_exporter).to receive(:output_logger).and_return(logger)
+          allow(logger).to receive(:warn)
+          allow(logger).to receive(:error)
+          expect(logger).to receive(:info).with(/Retry attempt 1/).ordered
+          expect(logger).to receive(:info).with(/Retry attempt 2/).ordered
+          expect(logger).to receive(:info).with(/Successfully retrieved namespace/).ordered
+          VCR.use_cassette("v4/gitlab-export-owner/#{project['path_with_namespace']}") do
+            project_exporter.export_owner_of_project
+          end
+        end
+      end
+    end
+  end
+
+  describe "#log_malformed_project_payload" do
+    let(:logger) { instance_double(Logger) }
+
+    before do
+      allow(gl_exporter).to receive(:output_logger).and_return(logger)
+      allow(logger).to receive(:error)
+    end
+
+    context "when project is a normal Hash" do
+      let(:malformed_project) do
+        {
+          "id" => 123,
+          "name" => "test-project",
+          "path" => "test-project",
+          "path_with_namespace" => "test-org/test-project",
+          "namespace" => nil,
+          "other_field" => "should not appear"
+        }
+      end
+      let(:project_exporter) { described_class.new(malformed_project, current_export: gl_exporter) }
+
+      it "logs relevant fields and excludes non-relevant fields" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error) do |message|
+          expect(message).to match(/Malformed project payload.*"id"=>123.*"name"=>"test-project"/m)
+          expect(message).not_to include("other_field")
+        end
+      end
+    end
+
+    context "when slice fails and falls back to to_h" do
+      let(:failing_slice_project) do
+        obj = double("FailingSliceProject")
+        allow(obj).to receive(:is_a?).with(Hash).and_return(false)
+        allow(obj).to receive(:respond_to?).with(:slice).and_return(true)
+        allow(obj).to receive(:respond_to?).with(:to_h).and_return(true)
+        allow(obj).to receive(:slice).and_raise(ArgumentError, "Invalid arguments")
+        allow(obj).to receive(:to_h).and_return({
+          "id" => 789,
+          "name" => "fallback-project",
+          "extra" => "data"
+        })
+        obj
+      end
+      let(:project_exporter) { described_class.new(failing_slice_project, current_export: gl_exporter) }
+
+      it "falls back to to_h and filters fields correctly" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error) do |message|
+          expect(message).to match(/Malformed project payload.*"id"=>789.*"name"=>"fallback-project"/m)
+          expect(message).not_to include("extra")
+        end
+      end
+    end
+
+    context "when both slice and to_h fail" do
+      let(:completely_broken_project) do
+        obj = double("CompletelyBrokenProject")
+        allow(obj).to receive(:is_a?).with(Hash).and_return(false)
+        allow(obj).to receive(:respond_to?).with(:slice).and_return(true)
+        allow(obj).to receive(:respond_to?).with(:to_h).and_return(true)
+        allow(obj).to receive(:slice).and_raise(ArgumentError)
+        allow(obj).to receive(:to_h).and_raise(StandardError, "Cannot convert to hash")
+        allow(obj).to receive(:class).and_return(double(name: "WeirdObject"))
+        allow(obj).to receive(:inspect).and_return("x" * 300)
+        obj
+      end
+      let(:project_exporter) { described_class.new(completely_broken_project, current_export: gl_exporter) }
+
+      it "logs error with type and truncates value to 200 chars" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error) do |message|
+          expect(message).to match(/Malformed project payload.*unable to slice project payload.*WeirdObject/m)
+          expect(message).to include("x" * 200)
+          expect(message).not_to include("x" * 201)
+        end
+      end
+    end
+
+    context "when project is not a Hash-like object" do
+      let(:string_project) { "not a hash at all" }
+      let(:project_exporter) { described_class.new(string_project, current_export: gl_exporter) }
+
+      it "logs error with type" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error).with(
+          /Malformed project payload.*project is not a Hash.*String/m
+        )
+      end
+    end
+
+    context "when project is nil" do
+      let(:nil_project) { nil }
+      let(:project_exporter) { described_class.new(nil_project, current_export: gl_exporter) }
+
+      it "logs error indicating nil project" do
+        project_exporter.send(:log_malformed_project_payload)
+
+        expect(logger).to have_received(:error).with(
+          /Malformed project payload.*project is not a Hash.*NilClass/m
+        )
+      end
+    end
   end
 
   describe "#export_milestones" do
@@ -314,20 +558,20 @@ describe GlExporter::ProjectExporter, :v4 do
     let(:milestones) do
       [
         {
-          "id"          => 1,
-          "title"       => "Prototype",
+          "id" => 1,
+          "title" => "Prototype"
         },
         {
-          "id"          => 2,
-          "title"       => "Prototype",
+          "id" => 2,
+          "title" => "Prototype"
         },
         {
-          "id"          => 3,
-          "title"       => "Prototype",
+          "id" => 3,
+          "title" => "Prototype"
         },
         {
-          "id"          => 4,
-          "title"       => "Something else",
+          "id" => 4,
+          "title" => "Something else"
         }
       ]
     end
@@ -370,7 +614,7 @@ describe GlExporter::ProjectExporter, :v4 do
 
   describe "#export_protected_branches" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-protected-branches/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-export-protected-branches/#{project['path_with_namespace']}") do
         project_exporter.export_protected_branches
       end
     end
@@ -389,7 +633,7 @@ describe GlExporter::ProjectExporter, :v4 do
 
   describe "#export_issues" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-issues/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-export-issues/#{project['path_with_namespace']}") do
         project_exporter.export_issues
       end
     end
@@ -413,22 +657,22 @@ describe GlExporter::ProjectExporter, :v4 do
 
     let(:issue) do
       VCR.use_cassette("v4/gitlab-closed-issue") do
-        Gitlab.issue(1169162, 1)
+        Gitlab.issue(1_169_162, 1)
       end
     end
 
     it "intializes an export object and adds it to `@issues`" do
       expect(GlExporter::IssueExporter).to receive(:new).with(
         issue,
-        project_exporter: project_exporter,
+        project_exporter: project_exporter
       )
-      expect{subject}.to change{project_exporter.issues.length}.by(1)
+      expect { subject }.to change { project_exporter.issues.length }.by(1)
     end
   end
 
   describe "#prepare_merge_requests_for_export" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-merge_requests/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-export-merge_requests/#{project['path_with_namespace']}") do
         project_exporter.prepare_merge_requests_for_export
       end
     end
@@ -458,7 +702,7 @@ describe GlExporter::ProjectExporter, :v4 do
 
     let(:merge_request) do
       VCR.use_cassette("v4/gitlab-merge-request") do
-        Gitlab.merge_request(1169162, 2)
+        Gitlab.merge_request(1_169_162, 2)
       end
     end
 
@@ -470,21 +714,21 @@ describe GlExporter::ProjectExporter, :v4 do
       expect(GlExporter::MergeRequestExporter).to receive(:new).with(
         merge_request,
         project_exporter: project_exporter,
-        project_owner: project_owner,
+        project_owner: project_owner
       )
-      expect{subject}.to change{project_exporter.merge_requests.length}.by(1)
+      expect { subject }.to change { project_exporter.merge_requests.length }.by(1)
     end
   end
 
   describe "#export_hooks" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-hooks/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-export-hooks/#{project['path_with_namespace']}") do
         project_exporter.export_hooks
       end
     end
 
     it "fetches tags from gitlab" do
-      expect(Gitlab).to receive(:webhooks).with(1169162).and_call_original
+      expect(Gitlab).to receive(:webhooks).with(1_169_162).and_call_original
       subject
     end
 
@@ -496,14 +740,14 @@ describe GlExporter::ProjectExporter, :v4 do
 
   describe "#export_tags" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-tags/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-export-tags/#{project['path_with_namespace']}") do
         project_exporter.export_tags
       end
     end
 
     it "fetches tags from gitlab" do
       allow(project_exporter).to receive(:export_tag)
-      expect(Gitlab).to receive(:tags).with(1169162).and_call_original
+      expect(Gitlab).to receive(:tags).with(1_169_162).and_call_original
       subject
     end
 
@@ -520,7 +764,7 @@ describe GlExporter::ProjectExporter, :v4 do
 
     let(:tag) do
       VCR.use_cassette("v4/gitlab-tag") do
-        Gitlab.tag(1169162, "end-of-sinatra")
+        Gitlab.tag(1_169_162, "end-of-sinatra")
       end
     end
 
@@ -544,7 +788,8 @@ describe GlExporter::ProjectExporter, :v4 do
 
   describe "#prepare_commit_comments_for_export" do
     subject do
-      VCR.use_cassette("v4/gitlab-export-commit-comments/#{project["path_with_namespace"]}", allow_playback_repeats: true) do
+      VCR.use_cassette("v4/gitlab-export-commit-comments/#{project['path_with_namespace']}",
+                       allow_playback_repeats: true) do
         project_exporter.prepare_commit_comments_for_export
       end
     end
@@ -555,7 +800,7 @@ describe GlExporter::ProjectExporter, :v4 do
     end
 
     it "fetches commits from gitlab" do
-      expect(Gitlab).to receive(:commits).with(1169162).and_call_original
+      expect(Gitlab).to receive(:commits).with(1_169_162).and_call_original
       subject
     end
 
@@ -579,13 +824,13 @@ describe GlExporter::ProjectExporter, :v4 do
 
     let(:commit) do
       VCR.use_cassette("v4/gitlab-commit") do
-        Gitlab.commit(1169162, "220d5dc2582a49d694c503abdb8cf25bcdd81dce")
+        Gitlab.commit(1_169_162, "220d5dc2582a49d694c503abdb8cf25bcdd81dce")
       end
     end
 
     let(:commit_comment) do
       VCR.use_cassette("v4/gitlab-commit_comment") do
-        Gitlab.commit_comments(1169162, "220d5dc2582a49d694c503abdb8cf25bcdd81dce").first
+        Gitlab.commit_comments(1_169_162, "220d5dc2582a49d694c503abdb8cf25bcdd81dce").first
       end
     end
 
@@ -598,21 +843,21 @@ describe GlExporter::ProjectExporter, :v4 do
       expect(GlExporter::CommitCommentExporter).to receive(:new).with(
         commit,
         commit_comment,
-        project_exporter: project_exporter,
+        project_exporter: project_exporter
       )
-      expect{subject}.to change{project_exporter.commit_comments.length}.by(1)
+      expect { subject }.to change { project_exporter.commit_comments.length }.by(1)
     end
   end
 
   describe "#export_wiki" do
     subject do
-      VCR.use_cassette("v4/gitlab-wiki/#{project["path_with_namespace"]}") do
+      VCR.use_cassette("v4/gitlab-wiki/#{project['path_with_namespace']}") do
         project_exporter.export_wiki
       end
     end
 
     it "exports the project wiki" do
-      expect(gl_exporter.archiver).to receive(:clone_wiki).with(hash_including "path_with_namespace" => project["path_with_namespace"])
+      expect(gl_exporter.archiver).to receive(:clone_wiki).with(hash_including("path_with_namespace" => project["path_with_namespace"]))
       subject
     end
   end
@@ -622,16 +867,16 @@ describe GlExporter::ProjectExporter, :v4 do
       [
         {
           "created_at" => DateTime.current - 5,
-          "iid"       => 1
+          "iid" => 1
         },
         {
           "created_at" => DateTime.current - 3,
-          "iid"        => 2
+          "iid" => 2
         },
         {
           "created_at" => DateTime.current - 1,
-          "iid"        => 3
-        },
+          "iid" => 3
+        }
       ]
     end
 
@@ -639,12 +884,12 @@ describe GlExporter::ProjectExporter, :v4 do
       [
         {
           "created_at" => DateTime.current - 4,
-          "iid"        => 1
+          "iid" => 1
         },
         {
           "created_at" => DateTime.current - 2,
-          "iid"        => 2
-        },
+          "iid" => 2
+        }
       ]
     end
 

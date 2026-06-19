@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::Storable, :v4 do
@@ -15,8 +16,8 @@ describe GlExporter::Storable, :v4 do
 
   describe "#store" do
     it "saves a MigratableResource" do
-      expect{pseudo_exporter.store("repository", pseudo_model)}
-        .to change{GlExporter::MigratableResource.all.length}.by(1)
+      expect { pseudo_exporter.store("repository", pseudo_model) }
+        .to change { GlExporter::MigratableResource.all.length }.by(1)
     end
 
     it "returns an instance of a MigratableResource" do

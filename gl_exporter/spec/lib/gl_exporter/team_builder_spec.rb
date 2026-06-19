@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::TeamBuilder do
@@ -37,10 +38,10 @@ describe GlExporter::TeamBuilder do
     it "will not duplicate information" do
       subject.add_project("https://gitlab.com/groups/Mouse-Hack", "https://gitlab.com/Mouse-Hack/hugo-pages")
       subject.add_project("https://gitlab.com/groups/Mouse-Hack", "https://gitlab.com/Mouse-Hack/hugo-pages")
-        expect(subject.projects).to eq([{
-        group: "https://gitlab.com/groups/Mouse-Hack",
-        project: "https://gitlab.com/Mouse-Hack/hugo-pages",
-      }])
+      expect(subject.projects).to eq([{
+      group: "https://gitlab.com/groups/Mouse-Hack",
+      project: "https://gitlab.com/Mouse-Hack/hugo-pages",
+    }])
     end
   end
 

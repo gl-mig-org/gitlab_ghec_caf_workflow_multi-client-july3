@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   class IssueExporter
     include UserContentRewritable
@@ -20,7 +21,6 @@ class GlExporter
       issue["assignee"] && export_user(issue["assignee"]["username"])
       prepare_issue_notes_for_export(issue)
     end
-
 
     # Alias for `issue`
     #
@@ -67,10 +67,12 @@ class GlExporter
     end
 
     # Instruct the exporter to export the `issue` as well as any attached notes.
-    # Also extracts any inline attachments from the `issue`'s body content
+    # Also extracts any inline attachments from the `issue`'s body content.
+    # Attachments must be extracted BEFORE serialization so the body rewrite
+    # (relative /uploads/... -> absolute repo URL) lands in the JSON archive.
     def export
-      serialize("issue", issue)
       extract_attachments("issue", issue)
+      serialize("issue", issue)
       issue_notes.each(&:export)
     end
 

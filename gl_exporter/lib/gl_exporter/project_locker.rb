@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "gitlab"
 class GlExporter
   class ProjectLocker
@@ -7,7 +8,7 @@ class GlExporter
     #
     # @param [String] lock_projects whether projects should be locked. One of
     #   "true", "false", "transient"
-    def initialize(lock_projects="false")
+    def initialize(lock_projects = "false")
       @lock_projects = lock_projects
       @locked = false
     end
@@ -16,7 +17,7 @@ class GlExporter
     #
     # @return [Boolean] if projects should be locked
     def lock?
-      ["true", "transient"].include?(@lock_projects) && ! @locked
+      ["true", "transient"].include?(@lock_projects) && !@locked
     end
 
     # Should projects be unlocked?

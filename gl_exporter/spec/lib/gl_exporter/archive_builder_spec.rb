@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 require "gl_exporter/tar_utils"
 require "digest/md5"
@@ -10,7 +11,7 @@ describe GlExporter::ArchiveBuilder, :v4 do
   let(:files) { `tar tfz #{tarball_path}`.split }
 
   def file_md5sum(path)
-    Digest::MD5.file(path).hexdigest
+    Digest::MD5.file(path).hexdigest # rubocop:disable GitHub/InsecureHashAlgorithm
   end
 
   it "makes a tarball with a json file" do
@@ -145,7 +146,7 @@ describe GlExporter::ArchiveBuilder, :v4 do
         end
 
         it "raises SSL errors" do
-          expect{
+          expect {
             archive_builder.save_attachment("tmp/test.png", "https://self-signed.badssl.com/")
           }.to raise_error(Faraday::SSLError)
         end
@@ -205,24 +206,44 @@ describe GlExporter::ArchiveBuilder, :v4 do
       it { is_expected.to  eq(false) }
     end
 
-    # See https://github.com/github/gl-exporter/issues/41
-    context "with an inaccessible attachment" do
+    # On GitLab < 17.4 the download falls back to the web `<repo>/uploads/...`
+    # route, which is not authenticated by PRIVATE-TOKEN and answers with a 302
+    # redirect to the sign-in page. Faraday's :raise_error middleware ignores
+    # 3xx and the connection does not follow redirects, so without an explicit
+    # guard the "You are being redirected" login HTML would be written to the
+    # tarball as if it were the asset. The download must fail instead.
+    context "when the response is an unauthenticated redirect (302)" do
+      let(:staging_dir) { Dir.mktmpdir "archive_builder" }
+      let(:save_path) { File.join(staging_dir, "attachments", "test.png") }
+      let(:redirect_response) do
+        instance_double(
+          Faraday::Response,
+          success?: false,
+          status: 302,
+          body: "<html><body>You are being <a href=\"/users/sign_in\">redirected</a>.</body></html>"
+        )
+      end
+
+      before do
+        allow_any_instance_of(GlExporter::ArchiveBuilder)
+          .to receive(:staging_dir).and_return(staging_dir)
+        allow(Gitlab).to receive_message_chain(:connection, :get)
+          .and_return(redirect_response)
+      end
+
       subject(:save_attachment) do
-        VCR.use_cassette("v4/remote-attachment-302") do
-          archive_builder.save_attachment("Sample.pdf", "http://httpstat.us/302", "https://gitlab.com/Mouse-Hack/hugo-pages/issues/5#note_11735615")
-        end
+        archive_builder.save_attachment(
+          "test.png",
+          "https://gitlab.example.com/group/proj/uploads/abc123/test.png",
+          "https://gitlab.example.com/group/proj/issues/1"
+        )
       end
 
-      it { is_expected.to  eq(false) }
+      it { is_expected.to eq(false) }
 
-      it "logs a message to the output" do
-        expect(archive_builder.current_export.output_logger).to receive(:warn)
+      it "does not write the redirect HTML to disk as the asset" do
         subject
-      end
-
-      it "logs a message to the log" do
-        expect(archive_builder.current_export.logger).to receive(:error)
-        subject
+        expect(File.exist?(save_path)).to eq(false)
       end
     end
 
@@ -270,6 +291,16 @@ describe GlExporter::ArchiveBuilder, :v4 do
         expect(logger_double).to receive(:error).with("Could not download asset at http://in valid-url because it is not a valid URL")
         subject
       end
+    end
+  end
+
+  describe "#next_attachment_counter" do
+    it "starts at 1 and increments monotonically" do
+      expect([
+        archive_builder.next_attachment_counter,
+        archive_builder.next_attachment_counter,
+        archive_builder.next_attachment_counter,
+      ]).to eq([1, 2, 3])
     end
   end
 end

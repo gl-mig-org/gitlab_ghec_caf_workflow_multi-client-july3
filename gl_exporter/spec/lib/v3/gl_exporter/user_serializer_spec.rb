@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::UserSerializer, :v3 do
   let(:user) do
@@ -13,15 +14,15 @@ describe GlExporter::UserSerializer, :v3 do
 
     it "returns a serialized User hash" do
       expected = {
-        :type => "user",
-        :url => "https://gitlab.com/u/kylemacey",
-        :login => "kylemacey",
-        :name => "Kyle Macey",
-        :company => nil,
-        :website => "",
-        :location => nil,
-        :emails => [{"address" => "shout@kylemacey.com", "primary" => true}],
-        :created_at => "2016-02-16T16:36:31.355Z"
+        type: "user",
+        url: "https://gitlab.com/u/kylemacey",
+        login: "kylemacey",
+        name: "Kyle Macey",
+        company: nil,
+        website: "",
+        location: nil,
+        emails: [{ "address" => "shout@kylemacey.com", "primary" => true }],
+        created_at: "2016-02-16T16:36:31.355Z"
       }
 
       expected.each do |key, value|

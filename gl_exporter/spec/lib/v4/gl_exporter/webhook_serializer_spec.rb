@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::WebhookSerializer, :v4 do
   let(:webhook) do
@@ -18,16 +19,16 @@ describe GlExporter::WebhookSerializer, :v4 do
 
     it "returns a serialized webhook hash" do
       expected = {
-        :payload_url => "http://requestb.in/1izuozf1",
-        :content_type => "json",
-        :event_types => [
+        payload_url: "http://requestb.in/1izuozf1",
+        content_type: "json",
+        event_types: [
           "push",
           "release",
           "issue_comment",
           "pull_request_review_comment",
         ],
-        :enable_ssl_verification => true,
-        :active => true
+        enable_ssl_verification: true,
+        active: true
       }
 
       expected.each do |key, value|

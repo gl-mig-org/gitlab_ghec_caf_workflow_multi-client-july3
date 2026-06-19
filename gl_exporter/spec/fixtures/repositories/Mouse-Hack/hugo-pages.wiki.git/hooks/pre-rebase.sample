@@ -140,7 +140,6 @@ Let's look at this example:
 	    /   /   /   /             \     /
     ---o---o---o---o---o---o---o---o---o---o---o "master"
 
-
 A, B and C are topic branches.
 
  * A has one fix since it was merged up to "next".

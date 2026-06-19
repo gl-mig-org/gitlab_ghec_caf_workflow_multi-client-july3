@@ -1,8 +1,9 @@
+# frozen_string_literal: true
 class Gitlab
   class UrlBuilder
     attr_accessor :url, :opts
 
-    def initialize(path="/", opts={})
+    def initialize(path = "/", opts = {})
       @url = File.join(Gitlab.api_endpoint, path)
       @opts = opts
     end

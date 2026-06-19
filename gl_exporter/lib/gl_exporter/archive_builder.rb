@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "gl_exporter/git_helpers"
 require "gl_exporter/tar_utils"
 require "addressable"
@@ -12,7 +13,7 @@ class GlExporter
 
     attr_reader :current_export
 
-    class AttachmentNotSaved < StandardError;end;
+    class AttachmentNotSaved < StandardError; end;
 
     def initialize(current_export: GlExporter.new)
       @current_export = current_export
@@ -47,7 +48,7 @@ class GlExporter
     def create_tar(path)
       files.values.each { |file| file.close }
       write_json_file("urls.json", UrlTemplates.new.templates)
-      write_json_file("schema.json", {:version => "1.2.0"})
+      write_json_file("schema.json", { version: "1.2.0" })
       create_archive(staging_dir, File.expand_path(path))
       FileUtils.remove_entry_secure staging_dir
     end
@@ -101,21 +102,42 @@ class GlExporter
       repo_path(project).gsub(/\.git\z/, ".wiki.git")
     end
 
+    # Monotonically increasing counter used by Attachable to give each
+    # attachment occurrence a unique on-disk archive path. Same upload
+    # referenced from N places gets N distinct files in the tarball, so
+    # the importer doesn't overwrite/delete blobs between records.
+    def next_attachment_counter
+      @attachment_counter ||= 0
+      @attachment_counter += 1
+    end
+
     def save_attachment(attach_path, remote_asset_url, parent_url = nil)
       save_path = File.join(staging_dir, "attachments", attach_path)
       FileUtils.mkdir_p(File.dirname(save_path))
 
       attachment_data = Gitlab.connection.get(remote_asset_url)
 
+      # On GitLab >= 17.4 we download from the authenticated API endpoint
+      # (/api/v4/projects/<id>/uploads/<secret>/<filename>), which returns the
+      # bytes directly. On older instances we fall back to the web
+      # `<repo>/uploads/...` route, which is not authenticated by PRIVATE-TOKEN
+      # and answers with a 302 redirect to the sign-in page. Faraday's
+      # :raise_error middleware only raises on 4xx/5xx and this connection does
+      # not follow redirects, so a 3xx would otherwise write the "You are being
+      # redirected" login HTML to the tarball as if it were the asset and still
+      # report success. Treat any non-2xx response as a failed download so the
+      # caller preserves the original markdown instead of saving a corrupt file.
+      if !attachment_data.success?
+        raise AttachmentNotSaved,
+          "unexpected HTTP #{attachment_data.status} response (likely an " \
+          "unauthenticated redirect on GitLab < 17.4)"
+      end
+
       File.write(
         save_path,
         attachment_data.body,
         mode: "wb"
       )
-
-      if parent_url.present?
-        raise AttachmentNotSaved if save_attachment_status(remote_asset_url) == 302
-      end
 
       true
     rescue URI::InvalidURIError => e
@@ -205,7 +227,7 @@ class GlExporter
     end
 
     def files
-      @files ||= Hash.new { |h,k| h[k] = SerializedModelWriter.new(staging_dir, k) }
+      @files ||= Hash.new { |h, k| h[k] = SerializedModelWriter.new(staging_dir, k) }
     end
   end
 end

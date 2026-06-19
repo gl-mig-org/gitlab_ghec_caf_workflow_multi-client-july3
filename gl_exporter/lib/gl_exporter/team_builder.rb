@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   class TeamBuilder
     attr_reader :current_export, :archiver
@@ -48,7 +49,6 @@ class GlExporter
       storage.all("group_projects")
     end
 
-
     # Serialize and return a flat array of all the team permutations
     #
     # @return [Array]
@@ -91,7 +91,7 @@ class GlExporter
 
     def build_team(group, permission, members, projects)
       team = faux_team_model(group, permission, members, projects)
-      TeamSerializer.new(:model_url_service => model_url_service).serialize(team)
+      TeamSerializer.new(model_url_service: model_url_service).serialize(team)
     end
 
     def faux_team_model(group, permission, members, projects)

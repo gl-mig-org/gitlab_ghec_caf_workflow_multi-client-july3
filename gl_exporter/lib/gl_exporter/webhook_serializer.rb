@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Webhooks from GitLab's Webhooks
@@ -31,11 +32,11 @@ class GlExporter
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :payload_url => url,
-        :content_type => "json",
-        :event_types => events,
-        :enable_ssl_verification => verify_ssl?,
-        :active => true
+        payload_url: url,
+        content_type: "json",
+        event_types: events,
+        enable_ssl_verification: verify_ssl?,
+        active: true
       }
     end
 
@@ -46,7 +47,7 @@ class GlExporter
     end
 
     def events
-      EVENT_MAPPINGS.select { |k,v| gl_model[k] }.flat_map { |k,v| v }
+      EVENT_MAPPINGS.select { |k, v| gl_model[k] }.flat_map { |k, v| v }
     end
 
     def verify_ssl?

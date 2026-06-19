@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::SafeTransaction, :v4 do
@@ -6,17 +7,17 @@ describe GlExporter::SafeTransaction, :v4 do
 
   describe "#safely" do
     it "reraises an exception for an unhandled error" do
-       e = FakeError.new
-       expect do
-         transaction.safely { raise e }
-       end.to raise_error(e)
+      e = FakeError.new
+      expect do
+        transaction.safely { raise e }
+      end.to raise_error(e)
     end
 
     it "does not raise an exception for a known error" do
-       e = Rugged::OdbError.new
-       expect do
-         transaction.safely { raise e }
-       end.to_not raise_error
+      e = Rugged::OdbError.new
+      expect do
+        transaction.safely { raise e }
+      end.to_not raise_error
     end
 
     it "logs errors to the provided logger for known errors" do

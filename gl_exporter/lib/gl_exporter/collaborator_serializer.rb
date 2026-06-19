@@ -1,16 +1,20 @@
+# frozen_string_literal: true
 class GlExporter
-
+  # MINIMAL   = 5  (upgraded to GUEST)
   # GUEST     = 10
+  # PLANNER   = 15 (downgraded to GUEST)
   # REPORTER  = 20
   # DEVELOPER = 30
   # MASTER    = 40
   # OWNER     = 50
   PERMISSION_MAP = {
+    5 => "read", # Minimal access -> Guest (upgraded)
     10 => "read",
+    15 => "read", # Planner -> Guest (downgraded)
     20 => "triage",
     30 => "write",
     40 => "maintain",
-    50 => "admin",
+    50 => "admin"
   }
 
   # Serializes Collaborators from GitLab's Project Team Members
@@ -27,12 +31,14 @@ class GlExporter
   #   "access_level"=>40}
   # ```
   class CollaboratorSerializer < BaseSerializer
-
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
+      # If permission is nil (unmapped), it's not a valid collaborator; return so we can filter it out
+      return unless permission
+
       {
-        :user       => user,
-        :permission => permission,
+        user: user,
+        permission: permission
       }
     end
 

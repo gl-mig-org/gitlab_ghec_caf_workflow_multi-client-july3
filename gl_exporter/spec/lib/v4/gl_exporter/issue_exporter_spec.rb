@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe GlExporter::IssueExporter, :v4 do
@@ -52,7 +53,7 @@ describe GlExporter::IssueExporter, :v4 do
     # The example issue has a beginning issue id of `5`
 
     it "changes the id of the attached issue" do
-      expect{issue_exporter.renumber!(27)}.to change{issue[Gitlab.issue_id_key]}
+      expect { issue_exporter.renumber!(27) }.to change { issue[Gitlab.issue_id_key] }
         .from(5).to(27)
     end
 

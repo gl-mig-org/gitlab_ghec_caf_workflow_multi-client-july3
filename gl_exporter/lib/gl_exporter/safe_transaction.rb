@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
   class SafeTransaction
     attr_reader :logger, :state, :response
@@ -43,7 +44,9 @@ class GlExporter
 
   module SafeExecution
     def safely(*args, &block)
+      # rubocop:disable GitHub/AvoidObjectSendWithDynamicMethod
       logger = send(self.class.class_variable_get(:@@safe_exception_logger))
+      # rubocop:enable GitHub/AvoidObjectSendWithDynamicMethod
       SafeTransaction.new(logger).safely(*args, &block)
     end
 

@@ -1,4 +1,5 @@
-require 'spec_helper'
+# frozen_string_literal: true
+require "spec_helper"
 
 describe GlExporter::CollaboratorSerializer, :v3 do
   let(:project_team_member) do
@@ -20,8 +21,8 @@ describe GlExporter::CollaboratorSerializer, :v3 do
 
     it "returns a serialized collaborator hash" do
       expected = {
-        :user       => "https://gitlab.com/u/spraints",
-        :permission => "maintain",
+        user: "https://gitlab.com/u/spraints",
+        permission: "maintain",
       }
 
       expected.each do |key, value|

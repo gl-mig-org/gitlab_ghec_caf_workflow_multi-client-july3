@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require "spec_helper"
 
 describe Gitlab::UrlBuilder, :v3 do
@@ -11,7 +12,7 @@ describe Gitlab::UrlBuilder, :v3 do
 
     it "can specify records per page" do
       builder = described_class.new(
-        'some/path', params: {
+        "some/path", params: {
           per_page: 13,
         }
       )
@@ -20,7 +21,7 @@ describe Gitlab::UrlBuilder, :v3 do
 
     it "can specify which page to fetch" do
       builder = described_class.new(
-        'some/path', params: {
+        "some/path", params: {
           page: 3,
         }
       )
@@ -29,7 +30,7 @@ describe Gitlab::UrlBuilder, :v3 do
 
     it "can specify records per page and which page to fetch" do
       builder = described_class.new(
-        'some/path', params: {
+        "some/path", params: {
           per_page: 13,
           page: 3,
         }

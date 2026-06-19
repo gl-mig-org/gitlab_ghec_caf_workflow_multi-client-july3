@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter::UrlTemplates
   def templates
     {
@@ -17,6 +18,9 @@ class GlExporter::UrlTemplates
       },
       "release"                     => "{scheme}://{+host}/{owner}/{repository}/tags/{release}",
       "label"                       => "{scheme}://{+host}/{owner}/{repository}/labels#/{label}",
+      # Required so the importer recognises records in attachments_*.json.
+      # Mirrors gh-gl2gh-legacy/src/gl2gh/Services/ArchiveBuilder.cs (L224).
+      "attachment"                  => "{scheme}://{+host}/{owner}/{repository}/{attachment}",
     }
   end
 end

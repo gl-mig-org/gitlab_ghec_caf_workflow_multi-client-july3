@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Commit Comments from GitLab's Commit Comments
@@ -23,16 +24,16 @@ class GlExporter
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :type       => "commit_comment",
-        :url        => url,
-        :repository => repository,
-        :user       => user,
-        :body       => body,
-        :formatter  => "markdown",
-        :path       => path,
-        :position   => position,
-        :commit_id  => commit_id,
-        :created_at => created_at
+        type: "commit_comment",
+        url: url,
+        repository: repository,
+        user: user,
+        body: body,
+        formatter: "markdown",
+        path: path,
+        position: position,
+        commit_id: commit_id,
+        created_at: created_at
       }
     end
 

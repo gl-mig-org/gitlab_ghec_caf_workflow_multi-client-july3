@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 class GlExporter
 
   # Serializes Pull Requests from GitLab's Merge Requests
@@ -51,24 +52,23 @@ class GlExporter
   # ```
   class PullRequestSerializer < BaseSerializer
 
-
     # @see GlExporter::BaseSerializer#to_gh_hash
     def to_gh_hash
       {
-        :type       => "pull_request",
-        :url        => url,
-        :user       => user,
-        :repository => repository,
-        :title      => title,
-        :body       => body,
-        :base       => base,
-        :head       => head,
-        :assignee   => assignee,
-        :milestone  => milestone,
-        :labels     => labels,
-        :merged_at  => merged_at,
-        :closed_at  => closed_at,
-        :created_at => created_at
+        type: "pull_request",
+        url: url,
+        user: user,
+        repository: repository,
+        title: title,
+        body: body,
+        base: base,
+        head: head,
+        assignee: assignee,
+        milestone: milestone,
+        labels: labels,
+        merged_at: merged_at,
+        closed_at: closed_at,
+        created_at: created_at
       }
     end
 
@@ -101,10 +101,10 @@ class GlExporter
 
     def base
       {
-        :ref => gl_model["target_branch"],
-        :sha => base_sha,
-        :user => url_for_model(gl_model["owner"]),
-        :repo => repository
+        ref: gl_model["target_branch"],
+        sha: base_sha,
+        user: url_for_model(gl_model["owner"]),
+        repo: repository
       }
     end
 
@@ -126,10 +126,10 @@ class GlExporter
 
     def head
       {
-        :ref => gl_model["source_branch"],
-        :sha => head_sha,
-        :user => url_for_model(gl_model["owner"]),
-        :repo => repository
+        ref: gl_model["source_branch"],
+        sha: head_sha,
+        user: url_for_model(gl_model["owner"]),
+        repo: repository
       }
     end
 
