@@ -330,6 +330,8 @@ jobs:
           [[ -n ${GH_HOST:-} ]] || { echo "[ERROR] GH_HOST is required"; exit 1; }
           [[ -n ${INVENTORY_FILE:-} ]] || { echo "[ERROR] INVENTORY_FILE is required"; exit 1; }
           [[ -n ${STORAGE_TYPE:-} ]] || { echo "[ERROR] STORAGE_TYPE is required (GITHUB or AZURE or AWS)"; exit 1; }
+          [[ -n ${GLXREPO_GH_PAT:-} ]] || { echo "[ERROR] GLXREPO_GH_PAT is required"; exit 1; }
+          [[ -n ${GL_EXPORTER_REPO_URL:-} ]] || { echo "[ERROR] GL_EXPORTER_REPO_URL is required"; exit 1; }
 
           if [[ "$STORAGE_TYPE" == "AZURE" ]]; then
             [[ -n ${AZ_CONTAINER:-} ]] || { echo "[ERROR] AZ_CONTAINER is required"; exit 1; }
@@ -503,6 +505,9 @@ jobs:
       AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      GLXREPO_GH_PAT: ${{ secrets.GLXREPO_GH_PAT }}
+      GL_EXPORTER_REPO_URL: ${{ vars.GL_EXPORTER_REPO_URL }}
+      
     needs: [approve-after-readiness-check]
     outputs:
       ARCHIVE_LIST_BASENAME: ${{ steps.capture.outputs.ARCHIVE_LIST_BASENAME }}
