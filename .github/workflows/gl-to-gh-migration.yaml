@@ -546,7 +546,9 @@ jobs:
             echo "[INFO] gl-exporter image not found. Building now..."
             mkdir -p gl_exporter
             git clone "https://x-access-token:${GLXREPO_GH_PAT}@${GL_EXPORTER_REPO_URL}" gl_exporter
-            docker build --no-cache -t gl-exporter "./gl_exporter/$(basename "$(git rev-parse --show-toplevel)")"
+            pushd "gl_exporter" >/dev/null
+            sudo docker build --no-cache=true -t "gl-exporter" .
+            popd >/dev/null
             
             echo "[INFO] Verifying gl-exporter image..."
 
