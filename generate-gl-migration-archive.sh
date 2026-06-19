@@ -195,7 +195,7 @@ while IFS= read -r raw; do
     -e GITLAB_API_PRIVATE_TOKEN="$GITLAB_API_PRIVATE_TOKEN" \
     -v "$WORKDIR":/workspace \
     "$GL_EXPORTER_IMAGE" \
-    gl_exporter $SSL_OPTS -f "/workspace/$(basename "$tmp_csv")" -o "/workspace/$out_tar" >>"$LOG_FILE" 2>&1
+    gl_exporter $GL_EXPORTER_ARGS $SSL_OPTS -f "/workspace/$(basename "$tmp_csv")" -o "/workspace/$out_tar" >>"$LOG_FILE" 2>&1
     then
         echo "\"$ns\",\"$pr\",\"$WORKDIR/$out_tar\",\"$github_org\",\"$github_repo\"" >> "$SUCCESS_LIST_FILE"  # Append a success record to the output CSV (quoted values).
         ok=$((ok + 1))  # Increment success count.
