@@ -129,6 +129,7 @@ GH_REPO_IDX="$(find_col "github_repo")" || array_of_err_messages+=("[ERROR] Miss
 Branch_Count="$(find_col "Branch_Count")" || array_of_err_messages+=("[ERROR] Missing required header: Branch_Count")
 Commit_Count="$(find_col "Commit_Count")" || array_of_err_messages+=("[ERROR] Missing required header: Commit_Count")
 FULL_URL_IDX="$(find_col "Full_URL")" || array_of_err_messages+=("[ERROR] Missing required header: Full_URL")
+EXCEPT_COMMIT_COMMENTS="$(find_col "except_commit_comments")"
 
 if ((${#array_of_err_messages[@]})); then
     {
@@ -148,6 +149,7 @@ while IFS= read -r raw; do
     pr="$(echo "${flds[$PR_IDX]:-}")"   # Extract Project value (blank if missing).
     github_org="$(echo "${flds[$GH_ORG_IDX]:-}")"   # Extract Github Org name (blank if missing).
     github_repo="$(echo "${flds[$GH_REPO_IDX]:-}")"   # Extract Github repo name (blank if missing).
+    except_commit_comments="$(echo "${flds[$EXCEPT_COMMIT_COMMENTS]:-}")"
     
     total=$((total + 1))   # Increment total rows processed.
     
@@ -188,14 +190,19 @@ while IFS= read -r raw; do
     #  - Mount WORKDIR at /workspace so exporter can read/write files.
     #  - Input CSV: /workspace/export_tmp.csv
     #  - Output archive: /workspace/<out_tar>
-    
+    if [[ -z "${except_commit_comments:-}" ]] ||  [[ "$except_commit_comments" == "no" ]] || [[ "$except_commit_comments" == "n" ]]; then
+        GL_EXPORTER_ARGS=""
+    elif [[ "$except_commit_comments" == "yes" ]] ||  [[ "$except_commit_comments" == "y" ]]; then
+        GL_EXPORTER_ARGS="--except commit_comments"
+    fi
+        
     if $DOCKER_CMD run --rm \
     -e GITLAB_API_ENDPOINT="$GITLAB_API_ENDPOINT" \
     -e GITLAB_USERNAME="$GITLAB_USERNAME" \
     -e GITLAB_API_PRIVATE_TOKEN="$GITLAB_API_PRIVATE_TOKEN" \
     -v "$WORKDIR":/workspace \
     "$GL_EXPORTER_IMAGE" \
-    gl_exporter $SSL_OPTS -f "/workspace/$(basename "$tmp_csv")" -o "/workspace/$out_tar" >>"$LOG_FILE" 2>&1
+    gl_exporter $GL_EXPORTER_ARGS $SSL_OPTS -f "/workspace/$(basename "$tmp_csv")" -o "/workspace/$out_tar" >>"$LOG_FILE" 2>&1
     then
         echo "\"$ns\",\"$pr\",\"$WORKDIR/$out_tar\",\"$github_org\",\"$github_repo\"" >> "$SUCCESS_LIST_FILE"  # Append a success record to the output CSV (quoted values).
         ok=$((ok + 1))  # Increment success count.
