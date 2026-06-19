@@ -148,6 +148,7 @@ This produces a CSV inventory of repositories.
 After generation, edit the CSV and add two columns:
 - `github_org`
 - `github_repo`
+- `except_commit_comments` : `yes or no`
 
 Fill in the target GitHub organization and repository name for each row.
 
