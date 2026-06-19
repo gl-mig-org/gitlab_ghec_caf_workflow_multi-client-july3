@@ -148,7 +148,8 @@ After generation, edit the CSV and add two columns:
 - `github_org` : Target GitHub Org
 - `github_repo` : Target Repo Name
 - `except_commit_comments` : `yes or no`
- Fill in the target GitHub organization and repository name for each row.
+
+Fill in the target GitHub organization and repository name for each row.
 
 #### Example Inventory CSV
 
