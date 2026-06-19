@@ -289,6 +289,8 @@ jobs:
       AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      GLXREPO_GH_PAT: ${{ secrets.GLXREPO_GH_PAT }}
+      GL_EXPORTER_REPO_URL: ${{ vars.GL_EXPORTER_REPO_URL }}
     needs: [getting-env-ready]
     steps:
       - name: Checkout
