@@ -23,7 +23,6 @@ GITHUB_ENV="$ARTIFACTS_DIR/github_env.txt"
 # CONFIG GL EXPORTER ARGS 
 ############################################################
 DISABLE_SSL=Y
-GL_EXPORTER_ARGS="--except commit_comments"
 
 # --- Runner script to invoke JS scripts
 RUNNER_SCRIPT="$BASE_SCRIPT_LOC/runner.sh"
