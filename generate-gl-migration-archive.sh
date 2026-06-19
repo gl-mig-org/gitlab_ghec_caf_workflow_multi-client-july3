@@ -190,10 +190,13 @@ while IFS= read -r raw; do
     #  - Mount WORKDIR at /workspace so exporter can read/write files.
     #  - Input CSV: /workspace/export_tmp.csv
     #  - Output archive: /workspace/<out_tar>
+    echo "Checking except flag arguments (Commit Comments)"
     if [[ -z "${except_commit_comments:-}" ]] ||  [[ "$except_commit_comments" == "no" ]] || [[ "$except_commit_comments" == "n" ]]; then
         GL_EXPORTER_ARGS=""
+        echo "--except commit_comments : None | exporting the entire repo"
     elif [[ "$except_commit_comments" == "yes" ]] ||  [[ "$except_commit_comments" == "y" ]]; then
         GL_EXPORTER_ARGS="--except commit_comments"
+        echo "--except commit_comments : Yes | exporting the repo without commit comments"
     fi
         
     if $DOCKER_CMD run --rm \
