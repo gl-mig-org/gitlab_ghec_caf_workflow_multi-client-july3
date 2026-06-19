@@ -76,6 +76,7 @@ https://docs.github.com/en/enterprise-cloud@latest/migrations/ado/managing-acces
 ├── polling_monitoring.sh
 ├── gl-post-migration-validation.sh
 ├── gitlab-stats-sample.csv
+├── gl_exporter/
 └── migration_scripts/
     ├── batch.js
     ├── create-env-vars.js
@@ -186,7 +187,6 @@ GitHub Repository → Settings → Environments → <ENVIRONMENT_NAME>
 | SOURCE_GL_SERVER_URL | https://gitlab.company.com |
 | GITLAB_USERNAME | gitlab-user |
 | GH_HOST | github.com or SUBDOMAIN.ghe.com |
-| GL_EXPORTER_REPO_URL | gl-exporter repo url |
 | STORAGE_TYPE | GITHUB / AZURE / AWS |
 | AZ_CONTAINER | Required only if STORAGE_TYPE = Azure |
 | AWS_BUCKET_NAME | Required only if STORAGE_TYPE = AWS |
@@ -200,12 +200,9 @@ GitHub Repository → Settings → Environments → <ENVIRONMENT_NAME>
 |------|-------------|
 | GITLAB_API_PRIVATE_TOKEN | GitLab token |
 | GH_PAT | GitHub PAT |
-| GLXREPO_GH_PAT | PAT required for the GL Exporter source repo |
 | AZURE_STORAGE_CONNECTION_STRING | Required only if STORAGE_TYPE = Azure |
 | AWS_ACCESS_KEY_ID | Required only if STORAGE_TYPE = AWS |
 | AWS_SECRET_ACCESS_KEY | Required only if STORAGE_TYPE = AWS |
-
-gl-exporter repo information required to clone and build docker image for archiving the repos using the docker image.
 
 ## 7. GitHub Environment Setup
 
