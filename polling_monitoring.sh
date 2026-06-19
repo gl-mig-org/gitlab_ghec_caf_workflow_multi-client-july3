@@ -41,6 +41,8 @@ while IFS=',' read -r \
   gitlab_project \
   github_org \
   github_repository \
+  gh_repo_visibility
+  gh_repo_visibility \
   migration_source_id \
   migration_id
 do
