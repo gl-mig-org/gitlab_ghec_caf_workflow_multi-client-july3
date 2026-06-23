@@ -6,9 +6,25 @@ source "$SCRIPT_DIR/config.sh"
 
 MIGRATION_OUTPUT_FILE="${MIGRATION_OUTPUT_FILE:-}"
 
+export TERM=dumb
+
+#########################################################
+# VALIDATION
+#########################################################
+
+if [[ -z "$MIGRATION_OUTPUT_FILE" ]]; then
+  echo "[ERROR] MIGRATION_OUTPUT_FILE not set"
+  exit 1
+fi
+
+if [[ ! -s "$MIGRATION_OUTPUT_FILE" ]]; then
+  echo "[ERROR] Migration CSV missing/empty"
+  exit 1
+fi
+
 GH_HOST="${GH_HOST:-}"
 if [[ -z "$GH_HOST" ]]; then
-  echo "GH_HOST is not set"
+  echo "[ERROR] GH_HOST not set"
   exit 1
 fi
 
@@ -21,237 +37,176 @@ else
   exit 1
 fi
 
+#########################################################
+# SETUP
+#########################################################
+
 RUN_TS="$(date +"%Y%m%d_%H%M%S")"
-LOG_FILE="${MONITOR_MIGRATION_LOG:-$LOG_DIR/monitor-migration}-${RUN_TS}.log"
-OUTPUT_FILE="$ARTIFACTS_DIR/migration-status-${RUN_TS}.csv"
-PER_MIGRATION_LOG_DIR="$LOG_DIR/monitor-migration-${RUN_TS}"
 
-INTERVAL=10
+LOG_DIR="${LOG_DIR:-./logs}"
+OUT_DIR="${ARTIFACTS_DIR:-./output_files}"
 
-mkdir -p "$LOG_DIR" "$ARTIFACTS_DIR" "$PER_MIGRATION_LOG_DIR"
+LOG_FILE="$LOG_DIR/monitor-$RUN_TS.log"
+STATE_FILE="$OUT_DIR/state-$RUN_TS.csv"
+OUTPUT_FILE="$OUT_DIR/final-$RUN_TS.csv"
+QUEUE_FILE="$(mktemp)"
+LOCK_FILE="$(mktemp)"
 
-export TERM=dumb
+INTERVAL=5
+MAX_PARALLEL=8
 
-if [[ -z "$MIGRATION_OUTPUT_FILE" ]]; then
-  echo "[ERROR] MIGRATION_OUTPUT_FILE not set"
-  exit 1
-elif [[ ! -s "$MIGRATION_OUTPUT_FILE" ]]; then
-  echo "[ERROR] Migration output file missing/empty"
-  exit 1
-else
-  echo "[INFO] Using migration output file: $MIGRATION_OUTPUT_FILE"
-fi
+mkdir -p "$LOG_DIR" "$OUT_DIR"
 
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-command -v gh >/dev/null 2>&1 || { echo "gh not found"; exit 1; }
-
-TOTAL_MIGRATIONS=$(($(wc -l < "$MIGRATION_OUTPUT_FILE") - 1))
-
-CPU_COUNT=$(nproc)
-PARALLEL=$(( CPU_COUNT < TOTAL_MIGRATIONS ? CPU_COUNT : TOTAL_MIGRATIONS ))
-PARALLEL=$(( PARALLEL > 8 ? 8 : PARALLEL ))
-
-echo "[INFO] Total migrations: $TOTAL_MIGRATIONS"
-echo "[INFO] Parallel workers: $PARALLEL"
-
-RESULTS_TMP=$(mktemp)
-INPUT_TMP=$(mktemp)
-
-echo "github_org,github_repository,migration_id,status" > "$OUTPUT_FILE"
+command -v gh >/dev/null || { echo "[ERROR] gh missing"; exit 1; }
 
 #########################################################
-# CSV helpers
+# LOAD INPUT (STRICT)
 #########################################################
 
-dequote() {
-  local field="${1:-}"
-  field="${field%$'\r'}"
-  field="${field%\"}"
-  field="${field#\"}"
-  echo "$field"
-}
+echo "[INFO] Loading CSV..."
 
-parse_csv_line() {
-  local line="$1"
-  local -a fields=()
-  local field=""
-  local in_quotes=false
-  local char
-  local i
+tail -n +2 "$MIGRATION_OUTPUT_FILE" | while IFS=',' read -r org repo mig; do
+  org="${org//$'\r'/}"
+  repo="${repo//$'\r'/}"
+  mig="${mig//$'\r'/}"
 
-  for ((i=0; i<${#line}; i++)); do
-    char="${line:$i:1}"
-
-    if [[ "$char" == '"' ]]; then
-      if [[ "$in_quotes" == true ]]; then
-        if [[ $((i + 1)) -lt ${#line} && "${line:$((i+1)):1}" == '"' ]]; then
-          field+='"'
-          ((i++))
-        else
-          in_quotes=false
-        fi
-      else
-        in_quotes=true
-      fi
-    elif [[ "$char" == ',' && "$in_quotes" == false ]]; then
-      fields+=("$field")
-      field=""
-    else
-      field+="$char"
-    fi
-  done
-
-  fields+=("$field")
-  printf '%s\n' "${fields[@]}"
-}
-
-find_col() {
-  local name="$1"
-  for i in "${!cols[@]}"; do
-    [[ "$(dequote "${cols[$i]}")" == "$name" ]] && { echo "$i"; return 0; }
-  done
-  return 1
-}
-
-#########################################################
-# Status collector
-#########################################################
-
-collect_status_snapshot() {
-  local completed=0 failed=0 running=0 queued=0
-
-  if [[ -s "$RESULTS_TMP" ]]; then
-    while IFS=',' read -r org repo migration state; do
-      case "$state" in
-        COMPLETED) ((completed++)) ;;
-        FAILED) ((failed++)) ;;
-        STARTED) ((running++)) ;;
-        *) ((queued++)) ;;
-      esac
-    done < "$RESULTS_TMP"
+  if [[ -n "$mig" ]]; then
+    echo "$org,$repo,$mig,PENDING"
   fi
+done > "$QUEUE_FILE"
 
-  SNAPSHOT_COMPLETED=$completed
-  SNAPSHOT_FAILED=$failed
-  SNAPSHOT_RUNNING=$running
-  SNAPSHOT_FINISHED=$((completed + failed))
+TOTAL=$(wc -l < "$QUEUE_FILE")
+
+if [[ "$TOTAL" -eq 0 ]]; then
+  echo "[ERROR] No valid migrations found"
+  exit 1
+fi
+
+echo "[INFO] Total migrations: $TOTAL"
+
+echo "org,repo,migration,status" > "$STATE_FILE"
+
+#########################################################
+# THREAD SAFE STATE WRITER
+#########################################################
+
+write_state() {
+  local line="$1"
+  (
+    flock -x 200
+    echo "$line" >> "$STATE_FILE"
+  ) 200>"$LOCK_FILE"
 }
 
 #########################################################
-# Build input
+# WORKER
 #########################################################
 
-header="$(head -n 1 "$MIGRATION_OUTPUT_FILE" | tr -d '\r')"
-readarray -t cols < <(parse_csv_line "$header")
-
-ORG_IDX="$(find_col 'github_org')"
-REPO_IDX="$(find_col 'github_repository')"
-MIGRATION_ID_IDX="$(find_col 'migration_id')"
-
-tail -n +2 "$MIGRATION_OUTPUT_FILE" | while IFS= read -r line; do
-  line="${line//$'\r'/}"
-  readarray -t flds < <(parse_csv_line "$line")
-
-  org="$(dequote "${flds[$ORG_IDX]:-}")"
-  repo="$(dequote "${flds[$REPO_IDX]:-}")"
-  mig="$(dequote "${flds[$MIGRATION_ID_IDX]:-}")"
-
-  [[ -z "$mig" ]] && continue
-
-  echo "$org,$repo,$mig"
-done > "$INPUT_TMP"
-
-#########################################################
-# Worker
-#########################################################
-
-run_monitor() {
+worker() {
   local line="$1"
-  IFS=',' read -r org repo migration <<< "$line"
 
-  echo "$org,$repo,$migration,STARTED" >> "$RESULTS_TMP"
+  IFS=',' read -r org repo mig status <<< "$line"
 
-  local log_file="$PER_MIGRATION_LOG_DIR/${org}_${repo}_${migration}.log"
+  write_state "$org,$repo,$mig,STARTED"
+
+  local log="$LOG_DIR/${org}_${repo}_${mig}.log"
 
   if gh ado2gh wait-for-migration \
-    --migration-id "$migration" \
-    --target-api-url "$TARGET_API_URL" >"$log_file" 2>&1; then
-    status="COMPLETED"
+      --migration-id "$mig" \
+      --target-api-url "$TARGET_API_URL" >"$log" 2>&1; then
+    write_state "$org,$repo,$mig,COMPLETED"
   else
-    status="FAILED"
+    write_state "$org,$repo,$mig,FAILED"
   fi
-
-  echo "$org,$repo,$migration,$status" >> "$RESULTS_TMP"
 }
 
-export -f run_monitor
-export TARGET_API_URL RESULTS_TMP PER_MIGRATION_LOG_DIR
+export -f worker
+export TARGET_API_URL STATE_FILE LOG_DIR LOCK_FILE
 
 #########################################################
-# Run parallel (FIXED)
+# RUNNERS (NO xargs, NO PID DEPENDENCY)
 #########################################################
 
-xargs -a "$INPUT_TMP" -P "$PARALLEL" -I {} bash -c 'run_monitor "$@"' _ {} &
+run_workers() {
+  local active=0
+
+  while IFS= read -r line; do
+
+    while [[ "$active" -ge "$MAX_PARALLEL" ]]; do
+      wait -n
+      active=$((active - 1))
+    done
+
+    worker "$line" &
+    active=$((active + 1))
+
+  done < "$QUEUE_FILE"
+
+  wait
+}
+
+#########################################################
+# MONITOR (EVENT DRIVEN)
+#########################################################
+
+monitor() {
+  while true; do
+
+    local completed failed running
+
+    completed=$(grep -c "COMPLETED" "$STATE_FILE" || true)
+    failed=$(grep -c "FAILED" "$STATE_FILE" || true)
+    running=$(grep -c "STARTED" "$STATE_FILE" || true)
+
+    local done=$((completed + failed))
+
+    echo "=================================================="
+    echo "[PROGRESS] $done / $TOTAL"
+    echo "Completed: $completed | Failed: $failed | Running: $running"
+    echo "=================================================="
+
+    if [[ "$done" -ge "$TOTAL" ]]; then
+      break
+    fi
+
+    sleep "$INTERVAL"
+  done
+}
+
+#########################################################
+# EXECUTION
+#########################################################
+
+echo "[INFO] Starting workers + monitor..."
+
+run_workers &
 WORKER_PID=$!
 
-#########################################################
-# Polling loop (CI SAFE)
-#########################################################
+monitor
 
-FIRST=true
-
-while kill -0 "$WORKER_PID" 2>/dev/null; do
-  collect_status_snapshot
-
-  if [[ "$FIRST" == true ]]; then
-    FIRST=false
-  fi
-
-  echo "=================================================="
-  echo "[INFO] Monitoring migrations"
-  echo "Progress : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}"
-  echo "Completed: ${SNAPSHOT_COMPLETED}"
-  echo "Failed   : ${SNAPSHOT_FAILED}"
-  echo "Running  : ${SNAPSHOT_RUNNING}"
-  echo "=================================================="
-
-  sleep "$INTERVAL"
-done
-
-wait "$WORKER_PID" || true
+wait "$WORKER_PID"
 
 #########################################################
-# Final output
+# FINAL OUTPUT
 #########################################################
 
-awk -F',' '
-{
-  latest[$3]=$0
-}
-END {
-  for (k in latest) print latest[k]
-}
-' "$RESULTS_TMP" >> "$OUTPUT_FILE"
+sort -u "$STATE_FILE" > "$OUTPUT_FILE"
 
-rm -f "$RESULTS_TMP" "$INPUT_TMP"
-
-#########################################################
-# Summary
-#########################################################
-
+echo ""
 echo "FINAL SUMMARY"
 echo "============="
 
-TOTAL=$(wc -l < "$OUTPUT_FILE")
+TOTAL_DONE=$(wc -l < "$OUTPUT_FILE")
+
 SUCCESS=$(grep -c "COMPLETED" "$OUTPUT_FILE" || true)
 FAILED=$(grep -c "FAILED" "$OUTPUT_FILE" || true)
 
-echo "Total : $TOTAL"
-echo "Success: $SUCCESS"
-echo "Failed : $FAILED"
+echo "Total processed: $TOTAL_DONE"
+echo "Success        : $SUCCESS"
+echo "Failed         : $FAILED"
 
-if [[ "$FAILED" -gt 0 ]]; then
-  echo "[ERROR] Some migrations failed"
-  exit 1
-fi
+echo ""
+echo "[INFO] Output file: $OUTPUT_FILE"
+echo "[INFO] Logs       : $LOG_DIR"
