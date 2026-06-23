@@ -814,6 +814,10 @@ jobs:
           }
 
           printf '\n'
+          echo "Output of start-gl2gh-repo-migration.sh"
+          echo "--------------------------------------"
+          cat start-gl2gh-repo-migration.out
+          printf '\n'
       #     echo "Output of start-gl2gh-repo-migration.sh"
       #     echo "--------------------------------------"
       #     cat start-gl2gh-repo-migration.out
