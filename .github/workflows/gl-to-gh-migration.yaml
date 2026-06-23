@@ -1082,11 +1082,20 @@ jobs:
           # ✅ Identify correct CSV
           export MIGRATION_OUTPUT_FILE=$(ls output_files/migration-outputs_*.csv | head -n1)
   
-          echo "[INFO] MIGRATION_OUTPUT_FILE_FILE: $MIGRATION_OUTPUT_FILE"
+          echo "[INFO] MIGRATION_OUTPUT_FILE: $MIGRATION_OUTPUT_FILE"
   
           chmod +x ./gl2gh-monitor-migration-status.sh
           ./gl2gh-monitor-migration-status.sh
-  
+
+      - name: Publish Monitor Summary to Dashboard
+        if: always()
+        shell: bash
+        run: |
+          if [ -f output_files/migration-status-*.csv ]; then
+            echo "### Migration Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+            echo "Artifact summaries successfully generated." >> $GITHUB_STEP_SUMMARY
+          fi
+          
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -1096,6 +1105,7 @@ jobs:
             gl2gh-monitor-migration-status.out
             output_files/
             logs/
+            
 # ------------------ 7) Post-Migration-Validation ------------------
   Post-Migration-Validation:
     name: Post-Migration-Validation
@@ -1103,7 +1113,7 @@ jobs:
     environment: ${{ inputs.ENVIRONMENT_NAME }}
     env:
       GH_HOST: ${{ vars.GH_HOST }}
-      INVENTORY_FILE: ${{ vars.INVENTORY_FILE }}
+      INVENTORY_FILE: ${{ inputs.INVENTORY_FILE }}
       GH_TOKEN: ${{ secrets.GH_PAT }}
       SOURCE_GL_SERVER_URL: ${{ vars.SOURCE_GL_SERVER_URL }}
       GITLAB_USERNAME: ${{ vars.GITLAB_USERNAME }}
