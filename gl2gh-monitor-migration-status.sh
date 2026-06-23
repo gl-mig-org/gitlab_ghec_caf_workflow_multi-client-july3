@@ -439,6 +439,11 @@ if [[ "$FAILED" -gt 0 ]]; then
   echo
 fi
 
+echo
+echo "Detailed Results"
+echo "----------------"
+column -s, -t "$OUTPUT_FILE"
+
 echo "Migration status written to: $OUTPUT_FILE"
 echo "Detailed logs written to: $LOG_FILE"
 echo "Repository migration logs written to: $PER_MIGRATION_LOG_DIR directory"
