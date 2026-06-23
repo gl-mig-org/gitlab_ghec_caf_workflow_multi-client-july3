@@ -68,10 +68,10 @@ parse_csv_line() {
     local in_quotes=false
     local char
     local i
-
+    
     for ((i=0; i<${#line}; i++)); do
         char="${line:$i:1}"
-
+        
         if [[ "$char" == '"' ]]; then
             if [[ "$in_quotes" == true ]]; then
                 if [[ "${line:$((i+1)):1}" == '"' ]]; then
@@ -90,7 +90,7 @@ parse_csv_line() {
             field+="$char"
         fi
     done
-
+    
     fields+=("$field")
     printf '%s\n' "${fields[@]}"
 }
@@ -129,7 +129,7 @@ GH_REPO_IDX="$(find_col "github_repo")" || array_of_err_messages+=("[ERROR] Miss
 Branch_Count="$(find_col "Branch_Count")" || array_of_err_messages+=("[ERROR] Missing required header: Branch_Count")
 Commit_Count="$(find_col "Commit_Count")" || array_of_err_messages+=("[ERROR] Missing required header: Commit_Count")
 FULL_URL_IDX="$(find_col "Full_URL")" || array_of_err_messages+=("[ERROR] Missing required header: Full_URL")
-EXCEPT_COMMIT_COMMENTS="$(find_col "except_commit_comments")"
+EXCEPT_COMMIT_COMMENTS="$(find_col "except_commit_comments" || true)"
 GH_REPO_VISIBILITY="$(find_col "gh_repo_visibility")" || array_of_err_messages+=("[ERROR] Missing required header: gh_repo_visibility")
 
 if ((${#array_of_err_messages[@]})); then
@@ -145,18 +145,25 @@ while IFS= read -r raw; do
     line="$(echo "$raw" | tr -d '\r')"  # Read a line and strip any Windows CR.
     #IFS=',' read -r -a flds <<< "$line"    # Split the line into fields by comma.
     readarray -t flds < <(parse_csv_line "$line")
-
+    
     ns="$(echo "${flds[$NS_IDX]:-}")"   # Extract Namespace value (blank if missing).
     pr="$(echo "${flds[$PR_IDX]:-}")"   # Extract Project value (blank if missing).
     github_org="$(echo "${flds[$GH_ORG_IDX]:-}")"   # Extract Github Org name (blank if missing).
     github_repo="$(echo "${flds[$GH_REPO_IDX]:-}")"   # Extract Github repo name (blank if missing).
-    except_commit_comments="$(echo "${flds[$EXCEPT_COMMIT_COMMENTS]:-}")"
     gh_repo_visibility="${flds[$GH_REPO_VISIBILITY]:-}"
 
+    except_commit_comments=""
+
+    if [[ -n "${EXCEPT_COMMIT_COMMENTS:-}" ]]; then
+        except_commit_comments="${flds[$EXCEPT_COMMIT_COMMENTS]:-}"
+    else
+	except_commit_comments=""
+    fi
+    
     total=$((total + 1))   # Increment total rows processed.
-
+    
     [[ -z "$ns" || -z "$pr" || -z "$github_org" || -z "$github_repo"  || -z "$gh_repo_visibility" ]] && skipped=$((skipped+1)) && echo "[WARN] Row: ${total} - Skipping due to missing required fields: gitlab_group='${ns}' gitlab_project='${pr}' github_org='${github_org}' github_repo='${github_repo}' gh_repo_visibility='$gh_repo_visibility'" && continue   # Skip rows that don’t have both Namespace, Project, GitHub Org and GitHub Repo.
-
+    
     if [[ "$gh_repo_visibility" != "private" && "$gh_repo_visibility" != "public" && "$gh_repo_visibility" != "internal" ]]; then
        echo "[ERROR] Invalid gh_repo_visibility: '$gh_repo_visibility'"
        echo "[ERROR] Valid values: private, public, internal"
@@ -174,40 +181,40 @@ while IFS= read -r raw; do
 
     # Extract Project name slug
     full_url="$(echo "${flds[$FULL_URL_IDX]:-}")"
-
+    
     if [[ -z "$full_url" ]]; then
         echo "[ERROR] Row: ${total} - Full_URL is empty. Cannot resolve project slug for '$ns / $pr'"
         fail=$((fail + 1))
         failed+=("$ns/$pr")
         continue
     fi
-
+    
     # Resolve correct GitLab project slug from Full_URL
     resolved_pr="$(basename "${full_url%%\?*}")"   # remove query params
     resolved_pr="${resolved_pr%.git}"              # remove .git if present
-
+    
     if [[ "$pr" == *" "* && -n "$resolved_pr" ]]; then
         echo "[INFO] Resolved project name: '$pr' -> '$resolved_pr'"
         pr="$resolved_pr"
     fi
-
+    
     # Name of the output archive for this project.
     safe_ns="$(file_safe "$ns")"
     safe_pr="$(file_safe "$pr")"
     out_tar="migration_archive_${safe_ns}_${safe_pr}.tar.gz"
-
+    
     echo "[INFO] Exporting: $ns / $pr -> $WORKDIR/$out_tar"
-
+    
     # Temporary CSV passed to gl-exporter for just this project.
     tmp_csv="$WORKDIR/export_tmp.csv"
     printf '%s,%s\n' "$ns" "\"$pr\"" > "$tmp_csv"
-
+    
     # Run gl-exporter in Docker:
     #  - Pass API endpoint, username, and token via environment.
     #  - Mount WORKDIR at /workspace so exporter can read/write files.
     #  - Input CSV: /workspace/export_tmp.csv
     #  - Output archive: /workspace/<out_tar>
-
+        
     if $DOCKER_CMD run --rm \
     -e GITLAB_API_ENDPOINT="$GITLAB_API_ENDPOINT" \
     -e GITLAB_USERNAME="$GITLAB_USERNAME" \
@@ -220,12 +227,12 @@ while IFS= read -r raw; do
         ok=$((ok + 1))  # Increment success count.
     else
         echo "[ERROR] FAILED: $ns/$pr"  # Log failure for this Namespace/Project.
-
+        
         failed+=("$ns/$pr")     # Record the failed item for summary output.
         fail=$((fail + 1))      # Increment failure count.
     fi
     rm -f "$tmp_csv"  # Clean up the temporary per-row CSV.
-
+    
 done < <(tail -n +2 "$INVENTORY_FILE")
 
 # --- Summary ---
@@ -248,4 +255,3 @@ echo
 echo "Run the below command to set env variable before running next script"
 echo "export ARCHIVE_LIST=$SUCCESS_LIST_FILE"
 echo
- 
