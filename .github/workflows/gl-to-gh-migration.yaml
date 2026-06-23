@@ -11,14 +11,17 @@ on:
         description: "GitLab Stats file generated using gitlab-stats gh extension"
         type: string
         default: "gitlab-stats.csv"
+        required: true
       GITHUB_TYPE:
         description: "Allowed values are GitHub or GitHubDR"
         type: string
         default: "GitHub"
+        required: true
       RUNNER_LABEL:
         description: "Runner label"
         type: string
         default: "ubuntu-latest"
+        required: true
 
 permissions:
   contents: read
@@ -818,26 +821,6 @@ jobs:
           echo "--------------------------------------"
           cat start-gl2gh-repo-migration.out
           printf '\n'
-      #     echo "Output of start-gl2gh-repo-migration.sh"
-      #     echo "--------------------------------------"
-      #     cat start-gl2gh-repo-migration.out
-      #     printf '\n'
-      #     MIGRATION_OUTPUT_FILE="$(grep -E '^export[[:space:]]+MIGRATION_OUTPUT_FILE=' start-gl2gh-repo-migration.out || true)"
-      #     [[ -n "$MIGRATION_OUTPUT_FILE" ]] || { echo "[ERROR] MIGRATION_OUTPUT_FILE export line not found"; exit 1; }
-
-      #     MIGRATION_OUTPUT_FILE="${MIGRATION_OUTPUT_FILE#export MIGRATION_OUTPUT_FILE=}"
-      #     [[ -n "${MIGRATION_OUTPUT_FILE:-}" ]] || { echo "[ERROR] MIGRATION_OUTPUT_FILE empty"; exit 1; }
-
-      #     echo "MIGRATION_OUTPUT_FILE=$MIGRATION_OUTPUT_FILE" > start-gl2gh-repo-migration-output-var.env
-
-      # - name: capture
-      #   id: capture
-      #   shell: bash
-      #   run: |
-      #     set -euo pipefail
-      #     MIGRATION_OUTPUT_FILE="$(grep -E '^MIGRATION_OUTPUT_FILE=' start-gl2gh-repo-migration-output-var.env | head -n1 | cut -d= -f2-)"
-      #     MIGRATION_OUTPUT_FILE_BASENAME="$(basename "$MIGRATION_OUTPUT_FILE")"
-      #     echo "MIGRATION_OUTPUT_FILE_BASENAME=$MIGRATION_OUTPUT_FILE_BASENAME" >> "$GITHUB_OUTPUT"
           
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -1013,33 +996,6 @@ jobs:
             output_files/
             logs/
 
-  # ------------------ Approve before Monitoring ------------------
-  # approve-before-monitoring:
-  #   name: approve-before-monitoring
-  #   runs-on: ["${{ inputs.RUNNER_LABEL }}"]
-  #   needs: [start-repository-migration,display-migration-summary]
-  #   environment:
-  #     name: approvers-group   # ✅ MUST configure in GitHub UI
-  #   steps:
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-  #       with:
-  #         name: start-repository-migration-artifacts
-  #         path: .
-  
-  #     - name: Approval Step
-  #       shell: bash
-  #       run: |
-  #         echo "===================================="
-  #         echo "MANUAL APPROVAL REQUIRED"
-  #         echo "===================================="
-  #         echo
-  #         echo "Review before monitoring:"
-  #         echo " - start-gl2gh-repo-migration.out"
-  #         echo " - output_files/migration-outputs_*.csv"
-  #         echo
-  #         echo "Click 'Review deployments' → Approve to continue."
-
   # ------------------ 6) Monitor Repository Migrations ------------------
   monitor-repository-migrations:
     name: monitor-repository-migrations
@@ -1142,14 +1098,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export INVENTORY_FILE="${INVENTORY_FILE:-}"
-          chmod +x ./gl2gh-monitor-migration-status.sh
-          ./gl2gh-monitor-migration-status.sh
+          chmod +x ./gl-post-migration-validation.sh
+          ./gl-post-migration-validations.sh
     
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: monitor-repository-migrations-artifacts
+          name: Post-Migration-Validation-artifacts
           retention-days: 7
           path: |
-            migration-status.csv
+            *.csv
+            *.log
+            output_files/
+            logs/
