@@ -1127,7 +1127,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./gl-post-migration-validation.sh
-          ./gl-post-migration-validations.sh
+          ./gl-post-migration-validation.sh
     
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
