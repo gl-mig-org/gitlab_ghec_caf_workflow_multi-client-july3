@@ -1128,14 +1128,14 @@ jobs:
           set -euo pipefail
           chmod +x ./gl-post-migration-validation.sh
           ./gl-post-migration-validation.sh
-    
+          
       - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: Post-Migration-Validation-artifacts
           retention-days: 7
           path: |
-            *.csv
-            *.log
-            output_files/
-            logs/
+            output_files/post-migration-validation/
+            logs/post-migration-validation-*
+  
