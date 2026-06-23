@@ -996,6 +996,34 @@ jobs:
             output_files/
             logs/
 
+
+  # ------------------ Approve before Monitoring ------------------
+  approve-before-monitoring:
+    name: approve-before-monitoring
+    runs-on: ["${{ inputs.RUNNER_LABEL }}"]
+    needs: [start-repository-migration,display-migration-summary]
+    environment:
+      name: approvers-group   # ✅ MUST configure in GitHub UI
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: start-repository-migration-artifacts
+          path: .
+  
+      - name: Approval Step
+        shell: bash
+        run: |
+          echo "===================================="
+          echo "MANUAL APPROVAL REQUIRED"
+          echo "===================================="
+          echo
+          echo "Review before monitoring:"
+          echo " - start-gl2gh-repo-migration.out"
+          echo " - output_files/migration-outputs_*.csv"
+          echo
+          echo "Click 'Review deployments' → Approve to continue."
+          
   # ------------------ 6) Monitor Repository Migrations ------------------
   monitor-repository-migrations:
     name: monitor-repository-migrations
@@ -1015,7 +1043,7 @@ jobs:
       AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    needs: [start-repository-migration]
+    needs: [start-repository-migration,approve-before-monitoring]
     
     steps:
       - name: Checkout
