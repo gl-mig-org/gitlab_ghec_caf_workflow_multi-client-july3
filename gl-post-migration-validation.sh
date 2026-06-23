@@ -1,94 +1,86 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-## --- Config ---> # Set script base path and load env from config.sh.
+# -------------------------
+# Config / env
+# -------------------------
 SCRIPT_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.sh"
 
-## --- Input / derived env --->
-MIGRATION_OUTPUT_FILE="${MIGRATION_OUTPUT_FILE:-}"
+INVENTORY_FILE="${INVENTORY_FILE:-}"     # REQUIRED: GitLab inventory CSV (gitlab-stats output + mapping cols)
 
-GH_HOST="${GH_HOST:-}"
-if [[ -z "$GH_HOST" ]]; then
-  echo "GH_HOST is not set"
-  echo 'Set GH_HOST; export GH_HOST="github.com" for Non-DR (or) GH_HOST="SUBDOMAIN.ghe.com" for DR'
-  exit 1
-fi
-
-if [[ "$GITHUB_TYPE" == "GitHub" ]]; then
-  TARGET_API_URL="https://api.github.com"
-elif [[ "$GITHUB_TYPE" == "GitHubDR" ]]; then
-  TARGET_API_URL="https://api.${GH_HOST}"
-else
-  echo "[ERROR] Invalid GITHUB_TYPE: $GITHUB_TYPE"
-  echo "[ERROR] Valid values: GitHub | GitHubDR"
-  exit 1
-fi
+# Fallback in case config.sh line is not added yet
+POST_MIGRATION_VALIDATION_LOG="${POST_MIGRATION_VALIDATION_LOG:-$LOG_DIR/post-migration-validation}"
 
 RUN_TS="$(date +"%Y%m%d_%H%M%S")"
-LOG_FILE="${MONITOR_MIGRATION_LOG:-$LOG_DIR/monitor-migration}-${RUN_TS}.log"
-OUTPUT_FILE="$ARTIFACTS_DIR/migration-status-${RUN_TS}.csv"
-PER_MIGRATION_LOG_DIR="$LOG_DIR/monitor-migration-${RUN_TS}"
+OUTPUT_DIR="$ARTIFACTS_DIR/post-migration-validation"
+LOG_FILE="${POST_MIGRATION_VALIDATION_LOG}-${RUN_TS}.log"
+SUMMARY_CSV="${OUTPUT_DIR}/validation-summary_${RUN_TS}.csv"
+SUMMARY_MD="${OUTPUT_DIR}/validation-summary_${RUN_TS}.md"
 
-INTERVAL=10
+mkdir -p "$LOG_DIR"
+mkdir -p "$OUTPUT_DIR"
 
-mkdir -p "$LOG_DIR" "$ARTIFACTS_DIR" "$PER_MIGRATION_LOG_DIR"
-
-if [[ -z "$MIGRATION_OUTPUT_FILE" ]]; then
-  echo "[ERROR] MIGRATION_OUTPUT_FILE env is not set. Please set it using the below command."
-  echo "export MIGRATION_OUTPUT_FILE=output-file.csv"
-  exit 1
-elif [[ ! -s "$MIGRATION_OUTPUT_FILE" ]]; then
-  echo "[ERROR] Migration output file is missing/empty: $MIGRATION_OUTPUT_FILE"
-  exit 1
-else
-  echo "[INFO] Using migration output file: $MIGRATION_OUTPUT_FILE"
-fi
-
-## Save all stdout+stderr to logfile AND still show on terminal
+# Save all stdout+stderr to logfile AND still show on terminal
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-## --- Basic checks --->
+# -------------------------
+# Pre-flight checks
+# -------------------------
+command -v gh >/dev/null 2>&1 || { echo "ERROR: GitHub CLI (gh) not found" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "ERROR: jq not found" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
 
-command -v gh >/dev/null 2>&1 || { echo "[ERROR] GitHub CLI (gh) not found"; exit 1; }
-command -v jq >/dev/null 2>&1 || { echo "[ERROR] jq not found"; exit 1; }
-command -v nproc >/dev/null 2>&1 || { echo "[ERROR] nproc not found"; exit 1; }
-
-TOTAL_MIGRATIONS=$(($(wc -l < "$MIGRATION_OUTPUT_FILE") - 1))
-if [[ "$TOTAL_MIGRATIONS" -le 0 ]]; then
-  echo "[ERROR] No migrations found in CSV file: $MIGRATION_OUTPUT_FILE"
+if [[ -z "${INVENTORY_FILE}" ]]; then
+  echo "ERROR: INVENTORY_FILE is not set" >&2
   exit 1
 fi
 
-CPU_COUNT=$(nproc)
-PARALLEL=$(( CPU_COUNT < TOTAL_MIGRATIONS ? CPU_COUNT : TOTAL_MIGRATIONS ))
-PARALLEL=$(( PARALLEL > 8 ? 8 : PARALLEL ))
+if [[ ! -f "${INVENTORY_FILE}" ]]; then
+  echo "ERROR: INVENTORY_FILE not found: ${INVENTORY_FILE}" >&2
+  exit 1
+fi
 
-echo "[INFO] Starting migration monitoring..."
-echo "[INFO] Migration output file : $MIGRATION_OUTPUT_FILE"
-echo "[INFO] Target API URL        : $TARGET_API_URL"
-echo "[INFO] Total migrations      : $TOTAL_MIGRATIONS"
-echo "[INFO] Parallel workers      : $PARALLEL"
-echo "[INFO] Progress interval     : ${INTERVAL}s"
-echo "[INFO] Status output file    : $OUTPUT_FILE"
-echo "[INFO] Full log file         : $LOG_FILE"
-echo "[INFO] Per-migration logs    : $PER_MIGRATION_LOG_DIR"
+if [[ -z "${GH_TOKEN:-}" && -n "${GH_PAT:-}" ]]; then
+  export GH_TOKEN="${GH_PAT}"
+fi
 
-RESULTS_TMP=$(mktemp)
-INPUT_TMP=$(mktemp)
+# If neither env token exists, require stored gh auth login
+if [[ -z "${GH_TOKEN:-}" && -z "${GITHUB_TOKEN:-}" ]]; then
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "ERROR: GitHub CLI not authenticated." >&2
+    echo "       Set GH_TOKEN (preferred) or GH_PAT, or run: gh auth login" >&2
+    exit 1
+  fi
+fi
 
-echo "github_org,github_repository,migration_id,status" > "$OUTPUT_FILE"
+# Sanity check: auth works for API calls
+if ! gh api -X GET /user >/dev/null 2>&1; then
+  echo "ERROR: GitHub auth check failed (cannot call /user)." >&2
+  echo "       Verify GH_TOKEN/GH_PAT/GITHUB_TOKEN scopes and SSO authorization if applicable." >&2
+  exit 1
+fi
 
-#########################################################
-## Helpers
-#########################################################
+echo "[INFO] Starting GitLab -> GitHub validation (Inventory-only)"
+echo "[INFO] Inventory: ${INVENTORY_FILE}"
+echo "[INFO] Output Dir: ${OUTPUT_DIR}"
+echo "[INFO] Log File  : ${LOG_FILE}"
+echo "[INFO] Summary   : ${SUMMARY_CSV}"
 
+# -------------------------
+# Output header
+# -------------------------
+printf 'github_org,github_repo,gitlab_namespace,gitlab_project,github_repo_exists,exists_status,github_branch_count,branches_status,github_default_branch,default_branch_status,github_commit_count_default_branch,commits_status,github_latest_sha_default_branch,gitlab_branch_count,branch_count_match,gitlab_commit_count,commit_count_match,notes\n' > "${SUMMARY_CSV}"
+
+# -------------------------
+# Helpers
+# -------------------------
 dequote() {
   local field="${1:-}"
   field="${field%$'\r'}"
   field="${field%\"}"
   field="${field#\"}"
-  echo "$field"
+  echo "${field}"
 }
 
 parse_csv_line() {
@@ -99,19 +91,19 @@ parse_csv_line() {
   local char
   local i
 
-  for ((i=0; i<${#line}; i++)); do
+  for (( i=0; i<${#line}; i++ )); do
     char="${line:$i:1}"
 
     if [[ "$char" == '"' ]]; then
-      if [[ "$in_quotes" == true ]]; then
-        if [[ $((i + 1)) -lt ${#line} && "${line:$((i+1)):1}" == '"' ]]; then
-          field+="$char"
-          ((i++))
-        else
-          in_quotes=false
-        fi
+      if [[ "$in_quotes" == true && $((i + 1)) -lt ${#line} && "${line:$((i + 1)):1}" == '"' ]]; then
+        field+='"'
+        ((i++))
       else
-        in_quotes=true
+        if [[ "$in_quotes" == true ]]; then
+          in_quotes=false
+        else
+          in_quotes=true
+        fi
       fi
     elif [[ "$char" == ',' && "$in_quotes" == false ]]; then
       fields+=("$field")
@@ -127,329 +119,225 @@ parse_csv_line() {
 
 find_col() {
   local name="$1"
-
   for i in "${!cols[@]}"; do
-    [[ "$(dequote "${cols[$i]}")" == "$name" ]] && {
-      echo "$i"
-      return 0
-    }
+    [[ "$(dequote "${cols[$i]}")" == "$name" ]] && { echo "$i"; return 0; }
   done
-
   return 1
 }
 
-append_repo_to_list() {
-  local current="${1:-}"
-  local value="${2:-}"
-
-  if [[ -z "$value" ]]; then
-    echo "$current"
-  elif [[ -z "$current" ]]; then
-    echo "$value"
-  else
-    echo "$current, $value"
-  fi
-}
-
-collect_status_snapshot() {
-  local line org repo migration state repo_name
-  local completed_count=0
-  local failed_count=0
-  local running_count=0
-  local queued_count=0
-
-  local completed_repos=""
-  local failed_repos=""
-  local in_progress_repos=""
-  local queued_repos=""
-
-  declare -A latest_status=()
-
-  if [[ -s "$RESULTS_TMP" ]]; then
-    while IFS=',' read -r org repo migration state; do
-      [[ -z "${migration:-}" ]] && continue
-      latest_status["$migration"]="$state"
-    done < "$RESULTS_TMP"
-  fi
-
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-    IFS=',' read -r org repo migration <<< "$line"
-    repo_name="${org}/${repo}"
-
-    case "${latest_status[$migration]:-QUEUED}" in
-      COMPLETED)
-        completed_count=$((completed_count + 1))
-        completed_repos="$(append_repo_to_list "$completed_repos" "$repo_name")"
-        ;;
-      FAILED)
-        failed_count=$((failed_count + 1))
-        failed_repos="$(append_repo_to_list "$failed_repos" "$repo_name")"
-        ;;
-      STARTED)
-        running_count=$((running_count + 1))
-        in_progress_repos="$(append_repo_to_list "$in_progress_repos" "$repo_name")"
-        ;;
-      *)
-        queued_count=$((queued_count + 1))
-        queued_repos="$(append_repo_to_list "$queued_repos" "$repo_name")"
-        ;;
-    esac
-  done < "$INPUT_TMP"
-
-  SNAPSHOT_COMPLETED="$completed_count"
-  SNAPSHOT_FAILED="$failed_count"
-  SNAPSHOT_RUNNING="$running_count"
-  SNAPSHOT_QUEUED="$queued_count"
-  SNAPSHOT_FINISHED=$((completed_count + failed_count))
-  SNAPSHOT_COMPLETED_REPOS="${completed_repos:-None}"
-  SNAPSHOT_FAILED_REPOS="${failed_repos:-None}"
-  SNAPSHOT_IN_PROGRESS_REPOS="${in_progress_repos:-None}"
-  SNAPSHOT_QUEUED_REPOS="${queued_repos:-None}"
-}
-
-#########################################################
-## Read header
-#########################################################
-
-header="$(head -n 1 "$MIGRATION_OUTPUT_FILE" | tr -d '\r')"
+# -------------------------
+# Read header / validate headers
+# -------------------------
+header="$(head -n 1 "${INVENTORY_FILE}" | tr -d $'\r')"
 readarray -t cols < <(parse_csv_line "$header")
 
 array_of_err_messages=()
 
-ORG_IDX="$(find_col 'github_org')" || \
-array_of_err_messages+=("[ERROR] Missing required header: github_org")
-
-REPO_IDX="$(find_col 'github_repository')" || \
-array_of_err_messages+=("[ERROR] Missing required header: github_repository")
-
-MIGRATION_ID_IDX="$(find_col 'migration_id')" || \
-array_of_err_messages+=("[ERROR] Missing required header: migration_id")
+NS_IDX="$(find_col "Namespace")" || array_of_err_messages+=("[ERROR] Missing required header: Namespace")
+PR_IDX="$(find_col "Project")" || array_of_err_messages+=("[ERROR] Missing required header: Project")
+BC_IDX="$(find_col "Branch_Count")" || array_of_err_messages+=("[ERROR] Missing required header: Branch_Count")
+CC_IDX="$(find_col "Commit_Count")" || array_of_err_messages+=("[ERROR] Missing required header: Commit_Count")
+GH_ORG_IDX="$(find_col "github_org")" || array_of_err_messages+=("[ERROR] Missing required header: github_org")
+GH_REPO_IDX="$(find_col "github_repo")" || array_of_err_messages+=("[ERROR] Missing required header: github_repo")
 
 if ((${#array_of_err_messages[@]})); then
-  {
-    printf '%s\n' "${array_of_err_messages[@]}"
-    echo "[ERROR] Header must contain 'github_org', 'github_repository', 'migration_id'"
-  } >&2
+  printf '%s\n' "${array_of_err_messages[@]}" >&2
+  echo "[ERROR] Header must contain 'Namespace', 'Project', 'Branch_Count', 'Commit_Count', 'github_org', 'github_repo'" >&2
   exit 1
 fi
 
-#########################################################
-## Build input list
-#########################################################
+# -------------------------
+# Summary counters
+# -------------------------
+total=0
+skipped=0
+ok=0
+fail=0
 
+# -------------------------
+# Iterate inventory rows
+# -------------------------
 while IFS= read -r raw; do
-  line="$(echo "$raw" | tr -d '\r')"
+  line="$(echo "$raw" | tr -d $'\r')"
   [[ -z "$line" ]] && continue
+
+  total=$((total + 1))
 
   readarray -t flds < <(parse_csv_line "$line")
 
-  github_org="$(dequote "${flds[$ORG_IDX]:-}")"
-  github_repository="$(dequote "${flds[$REPO_IDX]:-}")"
-  migration_id="$(dequote "${flds[$MIGRATION_ID_IDX]:-}")"
+  gitlab_namespace="$(dequote "${flds[$NS_IDX]:-}")"
+  gitlab_project="$(dequote "${flds[$PR_IDX]:-}")"
+  gitlab_branch_count="$(dequote "${flds[$BC_IDX]:-}")"
+  gitlab_commit_count="$(dequote "${flds[$CC_IDX]:-}")"
 
-  [[ -z "$migration_id" ]] && continue
+  github_org="$(dequote "${flds[$GH_ORG_IDX]:-}")"
+  github_repo_from_inv="$(dequote "${flds[$GH_REPO_IDX]:-}")"
 
-  echo "$github_org,$github_repository,$migration_id"
-done < <(tail -n +2 "$MIGRATION_OUTPUT_FILE") > "$INPUT_TMP"
+  # Normalize empties
+  [[ -z "${gitlab_branch_count}" ]] && gitlab_branch_count=0
+  [[ -z "${gitlab_commit_count}" ]] && gitlab_commit_count=0
 
-export TARGET_API_URL
-export RESULTS_TMP
-export PER_MIGRATION_LOG_DIR
-export LOG_FILE
-
-#########################################################
-## Monitor Function
-#########################################################
-
-run_monitor() {
-  local line="$1"
-
-  IFS=',' read -r org repo migration <<< "$line"
-
-  local safe_name
-  safe_name="$(echo "${org}_${repo}_${migration}" | tr '/:' '__')"
-
-  local log_file="$PER_MIGRATION_LOG_DIR/${safe_name}.log"
-
-  echo "$org,$repo,$migration,STARTED" >> "$RESULTS_TMP"
-
-  {
-    echo "======================================"
-    echo "Repo      : $org/$repo"
-    echo "Migration : $migration"
-    echo "Started   : $(date)"
-    echo "======================================"
-    echo
-
-    gh ado2gh wait-for-migration \
-      --migration-id "$migration" \
-      --target-api-url "$TARGET_API_URL"
-
-  } > "$log_file" 2>&1
-
-  local exit_code=$?
-
-  if [[ "$exit_code" -eq 0 ]]; then
-    status="COMPLETED"
-  else
-    status="FAILED"
+  # Guard
+  if [[ -z "$gitlab_namespace" || -z "$gitlab_project" || -z "$github_org" || -z "$github_repo_from_inv" ]]; then
+    echo "[WARN] Row: ${total} - Skipping due to missing Namespace/Project/github_org/github_repo"
+    skipped=$((skipped + 1))
+    continue
   fi
 
-  echo "$org,$repo,$migration,$status" >> "$RESULTS_TMP"
+  # Target GitHub repo name is taken from inventory github_repo column
+  github_repo="${github_repo_from_inv}"
 
-  {
-    echo
-    echo "======================================"
-    echo "Repo        : $org/$repo"
-    echo "Migration   : $migration"
-    echo "Final Status: $status"
-    echo "Log file    : $log_file"
-    echo "======================================"
-  } >> "$LOG_FILE"
-}
+  echo "[$(date)] ▶ Processing: GitLab ${gitlab_namespace}/${gitlab_project} -> GitHub ${github_org}/${github_repo}"
 
-export -f run_monitor
+  # Snapshot
+  gh repo view "${github_org}/${github_repo}" --json createdAt,diskUsage,defaultBranchRef,isPrivate \
+    > "${OUTPUT_DIR}/validation-${github_repo}.json" 2>/dev/null || true
 
-cat "$INPUT_TMP" | \
-xargs -I {} -P "$PARALLEL" bash -c 'run_monitor "$@"' _ {} &
-
-MONITOR_PID=$!
-MONITOR_START_TS=$(date +%s)
-
-#########################################################
-## Live monitoring
-#########################################################
-FIRST_DISPLAY=true
-while kill -0 "$MONITOR_PID" 2>/dev/null; do
-  collect_status_snapshot
-
-  now=$(date +%s)
-  elapsed=$((now - MONITOR_START_TS))
-  printf -v elapsed_hhmmss '%dm:%02ds' $((elapsed/60)) $((elapsed%60))
-
-
-  if [[ "$FIRST_DISPLAY" == true ]]; then
-    FIRST_DISPLAY=false
+  # Existence
+  if gh api -X GET "/repos/${github_org}/${github_repo}" >/dev/null 2>&1; then
+    github_repo_exists=true
+    exists_status="✅"
   else
-    tput cuu 6
+    github_repo_exists=false
+    exists_status="❌"
   fi
 
-cat <<EOF
-==================================================
-[$(date '+%H:%M:%S')] Monitoring migrations...
-Progress : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}
-Completed: ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | Running: ${SNAPSHOT_RUNNING}
-Elapsed  : ${elapsed_hhmmss}
-==================================================
-EOF
+  notes=""
+  github_branch_count=0
+  github_default_branch=""
+  github_commit_count_default_branch=0
+  github_latest_sha_default_branch=""
+  branches_status="❌"
+  default_branch_status="❌"
+  commits_status="❌"
 
-  {
-    echo
-    echo "Migration State Details ($(date))"
-    echo "---------------------------------"
-    echo "Repos that are in-progress: ${SNAPSHOT_IN_PROGRESS_REPOS}"
-    echo "Repos that are completed  : ${SNAPSHOT_COMPLETED_REPOS}"
-    echo "Repos that are queued     : ${SNAPSHOT_QUEUED_REPOS}"
-    echo "Repos that are failed     : ${SNAPSHOT_FAILED_REPOS}"
-    echo
-  } >> "$LOG_FILE"
+  if [[ "${github_repo_exists}" == true ]]; then
+    # Branches
+    github_branches_json="$(gh api "/repos/${github_org}/${github_repo}/branches" --paginate \
+      | jq -r '.[].name' \
+      | jq -R -s -c 'split("\n") | map(select(length>0))')"
+    github_branch_count="$(printf '%s' "$github_branches_json" | jq 'length')"
+    branches_status=$([[ "$github_branch_count" -gt 0 ]] && echo "✅" || echo "❌")
 
-  sleep "$INTERVAL"
-done
+    # Default branch
+    github_default_branch="$(gh api "/repos/${github_org}/${github_repo}" | jq -r '.default_branch // ""')"
+    default_branch_status=$([[ -n "$github_default_branch" ]] && echo "✅" || echo "❌")
 
-wait "$MONITOR_PID" || true
+    # Commits on default branch
+    if [[ -n "$github_default_branch" ]]; then
+      repo_commit_total=0
+      latest=""
+      page=1
+      per=100
 
-collect_status_snapshot
+      while :; do
+        enc_branch="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$github_default_branch")"
+        chunk="$(gh api "/repos/${github_org}/${github_repo}/commits?sha=${enc_branch}&page=${page}&per_page=${per}" | jq -c '.')"
+        cnt="$(printf '%s' "$chunk" | jq 'length')"
 
-now=$(date +%s)
-elapsed=$((now - MONITOR_START_TS))
-printf -v elapsed_hhmmss '%dm:%02ds' $((elapsed/60)) $((elapsed%60))
+        if [[ "$page" -eq 1 && "$cnt" -gt 0 ]]; then
+          latest="$(printf '%s' "$chunk" | jq -r '.[0].sha')"
+        fi
 
-if [[ "$FIRST_DISPLAY" != true ]]; then
-  tput cuu 6
-fi
+        repo_commit_total=$((repo_commit_total + cnt))
 
-cat <<EOF
-==================================================
-[$(date '+%H:%M:%S')] Monitoring migrations...
-Progress : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}
-Completed: ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | Running: ${SNAPSHOT_RUNNING}
-Elapsed  : ${elapsed_hhmmss}
-==================================================
-EOF
+        if [[ "$cnt" -eq "$per" ]]; then
+          page=$((page + 1))
+        else
+          break
+        fi
+      done
 
-awk -F',' '
+      github_commit_count_default_branch="${repo_commit_total}"
+      github_latest_sha_default_branch="${latest}"
+      commits_status=$([[ "$github_commit_count_default_branch" -gt 0 ]] && echo "✅" || echo "❌")
+    else
+      notes="No default branch on GitHub"
+    fi
+  else
+    notes="GitHub repository not found or no access"
+  fi
 
-  {
-    latest[$3]=$0
-  }
-  END {
-    for (id in latest) {
-      split(latest[id], f, ",")
-      if (f[4] == "COMPLETED" || f[4] == "FAILED") {
-        print latest[id]
-      }
-    }
-  }
-' "$RESULTS_TMP" | sort >> "$OUTPUT_FILE"
+  # Match checks
+  branch_count_match=$([[ "$github_branch_count" -eq "$gitlab_branch_count" ]] && echo "✅" || echo "❌")
+  commit_count_match=$([[ "$github_commit_count_default_branch" -eq "$gitlab_commit_count" ]] && echo "✅" || echo "❌")
 
-rm -f "$RESULTS_TMP" "$INPUT_TMP"
+  # Processing counters
+  ok=$((ok + 1))
 
-#########################################################
-## Final Summary
-#########################################################
+  # Logs
+  echo "[$(date)]   Exists: ${exists_status} | Branches: ${github_branch_count} ${branches_status}"
+  echo "[$(date)]   Default Branch: ${github_default_branch:-'(none)'} ${default_branch_status}"
+  echo "[$(date)]   Commits (Default Branch): ${github_commit_count_default_branch} ${commits_status}"
+  [[ -n "$github_latest_sha_default_branch" ]] && echo "[$(date)]   Latest SHA (Default Branch): ${github_latest_sha_default_branch}"
+  echo "[$(date)]   Match: Branch ${branch_count_match} | Commit ${commit_count_match}"
 
-echo
-echo "FINAL MIGRATION SUMMARY"
-echo "=================================================="
+  # Write CSV row
+  printf '%s\n' \
+    "${github_org},${github_repo},${gitlab_namespace},${gitlab_project},${github_repo_exists},${exists_status},${github_branch_count},${branches_status},${github_default_branch},${default_branch_status},${github_commit_count_default_branch},${commits_status},${github_latest_sha_default_branch},${gitlab_branch_count},${branch_count_match},${gitlab_commit_count},${commit_count_match},${notes}" \
+    >> "${SUMMARY_CSV}"
 
-TOTAL=0
-SUCCESS=0
-FAILED=0
+done < <(tail -n +2 "${INVENTORY_FILE}")
 
-while IFS=',' read -r org repo migration status; do
-  [[ "$org" == "github_org" ]] && continue
-  [[ -z "${migration:-}" ]] && continue
+echo "[INFO] Validation completed."
+echo "[INFO] Artifacts: ${LOG_FILE}, ${SUMMARY_CSV}"
 
-  TOTAL=$((TOTAL + 1))
-
-  case "$status" in
-    COMPLETED)
-      SUCCESS=$((SUCCESS + 1))
-      ;;
-    FAILED)
-      FAILED=$((FAILED + 1))
-      ;;
-  esac
-done < "$OUTPUT_FILE"
-
-echo "Total Repositories : $TOTAL"
-echo "Successful         : $SUCCESS"
-echo "Failed             : $FAILED"
-echo "=================================================="
-echo
-
-if [[ "$FAILED" -gt 0 ]]; then
-  echo "Failed Repositories"
-  echo "-------------------"
-  awk -F',' '
-    NR > 1 && $4 == "FAILED" {
-      printf "  - %s/%s (Migration ID: %s)\n", $1, $2, $3
-    }
-  ' "$OUTPUT_FILE"
+# -------------------------
+# Markdown summary
+# -------------------------
+{
+  echo "# Post-Migration Validation Summary"
   echo
-fi
+  echo "| GitHub Repo | GitLab Project | Exists | GH Branches | GL Branches | Branch Match | GH Default Branch | GH Commits (Default) | GL Commits | Commit Match | Notes |"
+  echo "|---|---|---|---:|---:|---|---|---:|---:|---|---|"
 
-echo "Migration status written to: $OUTPUT_FILE"
-echo "Detailed logs written to: $LOG_FILE"
-echo "Repository migration logs written to: $PER_MIGRATION_LOG_DIR directory"
+  tail -n +2 "${SUMMARY_CSV}" | while IFS=',' read -r org repo gl_ns gl_proj repo_exists exists_status bc_gh branches_status def_branch default_branch_status cc_gh commits_status sha gl_bc bc_match gl_cc cc_match notes; do
+    github_repo_fmt="${org}/${repo}"
+    gitlab_proj_fmt="${gl_ns}/${gl_proj}"
+    notes_esc="${notes//|/\\|}"
+    echo "| ${github_repo_fmt} | ${gitlab_proj_fmt} | ${exists_status} | ${bc_gh} | ${gl_bc} | ${bc_match} | ${def_branch} | ${cc_gh} | ${gl_cc} | ${cc_match} | ${notes_esc} |"
+  done
+} > "${SUMMARY_MD}"
+
+echo "[INFO] Markdown summary written: ${SUMMARY_MD}"
+
+# -------------------------
+# Final summary table
+# -------------------------
+echo
+echo "Summary:"
+echo "  Total   : $total"
+echo "  Skipped : $skipped"
+echo "  Success : $ok"
+echo "  Failed  : $fail"
+echo ""
+echo "Validation CSV : ${SUMMARY_CSV}"
+echo "Validation MD  : ${SUMMARY_MD}"
+echo "Detailed logs written to ${LOG_FILE}"
 echo
 
-if [[ "$FAILED" -gt 0 ]]; then
-  echo
-  echo "[ERROR] One or more migrations failed. Check logs under: $PER_MIGRATION_LOG_DIR"
-  exit 1
-fi
+echo "===================== FINAL SUMMARY ====================="
+{
+    echo "GitHub Repo|GitLab Project|Exists|Branches|Default Branch|Branch Match|Commit Match"
 
-echo
+    tail -n +2 "${SUMMARY_CSV}" | while IFS=',' read -r org repo gl_ns gl_proj repo_exists exists_status bc_gh branches_status def_branch default_branch_status cc_gh commits_status sha gl_bc bc_match gl_cc cc_match notes
+    do
+        github_repo_fmt="${org}/${repo}"
+        gitlab_proj_fmt="${gl_ns}/${gl_proj}"
+
+        # Truncate only long columns
+        [[ ${#github_repo_fmt} -gt 45 ]] && github_repo_fmt="${github_repo_fmt:0:42}..."
+        [[ ${#gitlab_proj_fmt} -gt 40 ]] && gitlab_proj_fmt="${gitlab_proj_fmt:0:37}..."
+
+        printf "%s|%s|%s|%s|%s|%s|%s\n" \
+            "$github_repo_fmt" \
+            "$gitlab_proj_fmt" \
+            "$exists_status" \
+            "$bc_gh" \
+            "$def_branch" \
+            "$bc_match" \
+            "$cc_match"
+    done
+} | column -t -s '|'
+
+echo "========================================================="
