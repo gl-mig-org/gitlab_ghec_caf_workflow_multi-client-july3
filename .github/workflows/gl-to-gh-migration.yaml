@@ -1001,7 +1001,7 @@ jobs:
   approve-before-monitoring:
     name: approve-before-monitoring
     runs-on: ["${{ inputs.RUNNER_LABEL }}"]
-    needs: [start-repository-migration,display-migration-summary]
+    needs: [start-repository-migration]
     environment:
       name: approvers-group   # ✅ MUST configure in GitHub UI
     steps:
