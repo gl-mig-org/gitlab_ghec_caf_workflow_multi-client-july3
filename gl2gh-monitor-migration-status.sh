@@ -337,9 +337,9 @@ while kill -0 "$MONITOR_PID" 2>/dev/null; do
 cat <<EOF
 ==================================================
 [$(date '+%H:%M:%S')] Monitoring migrations...
-Progress : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}
-Completed: ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | Running: ${SNAPSHOT_RUNNING}
-Elapsed  : ${elapsed_hhmmss}
+Completed : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}
+Success   : ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | In-Progress: ${SNAPSHOT_RUNNING}
+Elapsed   : ${elapsed_hhmmss}
 ==================================================
 EOF
 
