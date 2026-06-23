@@ -1101,31 +1101,22 @@ jobs:
     runs-on: ["${{ inputs.RUNNER_LABEL }}"]
     environment: ${{ inputs.ENVIRONMENT_NAME }}
     env:
-      SOURCE_GL_SERVER_URL: ${{ vars.SOURCE_GL_SERVER_URL }}
-      GITLAB_USERNAME: ${{ vars.GITLAB_USERNAME }}
       GH_HOST: ${{ vars.GH_HOST }}
-      STORAGE_TYPE: ${{ vars.STORAGE_TYPE }}
-      AZ_CONTAINER: ${{ vars.AZ_CONTAINER }}
-      AWS_BUCKET_NAME: ${{ vars.AWS_BUCKET_NAME }}
-      AWS_REGION: ${{ vars.AWS_REGION }}
       INVENTORY_FILE: ${{ vars.INVENTORY_FILE }}
-      GITLAB_API_PRIVATE_TOKEN: ${{ secrets.GITLAB_API_PRIVATE_TOKEN }}
-      GH_PAT: ${{ secrets.GH_PAT }}
       GH_TOKEN: ${{ secrets.GH_PAT }}
-      AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     needs: [monitor-repository-migrations]
     
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-    
-      # ✅ Run your script
+        uses: actions/checkout@v4
+
       - name: Run Post Validation Script
         shell: bash
         run: |
           set -euo pipefail
+          export INVENTORY_FILE="${INVENTORY_FILE:-}"
+          export GH_HOST="${GH_HOST:-}"
+          export GH_TOKEN="${GH_PAT:-}"
           chmod +x ./gl-post-migration-validation.sh
           ./gl-post-migration-validation.sh
           
