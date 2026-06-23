@@ -30,14 +30,13 @@ INTERVAL=10
 
 mkdir -p "$LOG_DIR" "$ARTIFACTS_DIR" "$PER_MIGRATION_LOG_DIR"
 
-# IMPORTANT: CI SAFE (prevents TERM/tput issues)
 export TERM=dumb
 
 if [[ -z "$MIGRATION_OUTPUT_FILE" ]]; then
   echo "[ERROR] MIGRATION_OUTPUT_FILE not set"
   exit 1
 elif [[ ! -s "$MIGRATION_OUTPUT_FILE" ]]; then
-  echo "[ERROR] Migration output missing"
+  echo "[ERROR] Migration output file missing/empty"
   exit 1
 else
   echo "[INFO] Using migration output file: $MIGRATION_OUTPUT_FILE"
@@ -45,7 +44,7 @@ fi
 
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-command -v gh >/dev/null || { echo "gh missing"; exit 1; }
+command -v gh >/dev/null 2>&1 || { echo "gh not found"; exit 1; }
 
 TOTAL_MIGRATIONS=$(($(wc -l < "$MIGRATION_OUTPUT_FILE") - 1))
 
@@ -62,7 +61,7 @@ INPUT_TMP=$(mktemp)
 echo "github_org,github_repository,migration_id,status" > "$OUTPUT_FILE"
 
 #########################################################
-## Helpers (UNCHANGED CORE LOGIC)
+# CSV helpers
 #########################################################
 
 dequote() {
@@ -73,71 +72,98 @@ dequote() {
   echo "$field"
 }
 
-parse_csv_line() { ... }   # (keep your existing one unchanged)
-find_col() { ... }
-append_repo_to_list() { ... }
+parse_csv_line() {
+  local line="$1"
+  local -a fields=()
+  local field=""
+  local in_quotes=false
+  local char
+  local i
 
-#########################################################
-## STATUS COLLECTION (unchanged but safe)
-#########################################################
+  for ((i=0; i<${#line}; i++)); do
+    char="${line:$i:1}"
 
-collect_status_snapshot() {
-  local completed_count=0
-  local failed_count=0
-  local running_count=0
-  local queued_count=0
+    if [[ "$char" == '"' ]]; then
+      if [[ "$in_quotes" == true ]]; then
+        if [[ $((i + 1)) -lt ${#line} && "${line:$((i+1)):1}" == '"' ]]; then
+          field+='"'
+          ((i++))
+        else
+          in_quotes=false
+        fi
+      else
+        in_quotes=true
+      fi
+    elif [[ "$char" == ',' && "$in_quotes" == false ]]; then
+      fields+=("$field")
+      field=""
+    else
+      field+="$char"
+    fi
+  done
 
-  local completed_repos=""
-  local failed_repos=""
-  local in_progress_repos=""
-  local queued_repos=""
+  fields+=("$field")
+  printf '%s\n' "${fields[@]}"
+}
 
-  declare -A latest_status=()
-
-  if [[ -s "$RESULTS_TMP" ]]; then
-    while IFS=',' read -r org repo migration state; do
-      latest_status["$migration"]="$state"
-    done < "$RESULTS_TMP"
-  fi
-
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-    IFS=',' read -r org repo migration <<< "$line"
-
-    case "${latest_status[$migration]:-QUEUED}" in
-      COMPLETED)
-        ((completed_count++))
-        ;;
-      FAILED)
-        ((failed_count++))
-        ;;
-      STARTED)
-        ((running_count++))
-        ;;
-      *)
-        ((queued_count++))
-        ;;
-    esac
-  done < "$INPUT_TMP"
-
-  SNAPSHOT_COMPLETED="$completed_count"
-  SNAPSHOT_FAILED="$failed_count"
-  SNAPSHOT_RUNNING="$running_count"
-  SNAPSHOT_FINISHED=$((completed_count + failed_count))
+find_col() {
+  local name="$1"
+  for i in "${!cols[@]}"; do
+    [[ "$(dequote "${cols[$i]}")" == "$name" ]] && { echo "$i"; return 0; }
+  done
+  return 1
 }
 
 #########################################################
-## Build Input
+# Status collector
 #########################################################
+
+collect_status_snapshot() {
+  local completed=0 failed=0 running=0 queued=0
+
+  if [[ -s "$RESULTS_TMP" ]]; then
+    while IFS=',' read -r org repo migration state; do
+      case "$state" in
+        COMPLETED) ((completed++)) ;;
+        FAILED) ((failed++)) ;;
+        STARTED) ((running++)) ;;
+        *) ((queued++)) ;;
+      esac
+    done < "$RESULTS_TMP"
+  fi
+
+  SNAPSHOT_COMPLETED=$completed
+  SNAPSHOT_FAILED=$failed
+  SNAPSHOT_RUNNING=$running
+  SNAPSHOT_FINISHED=$((completed + failed))
+}
+
+#########################################################
+# Build input
+#########################################################
+
+header="$(head -n 1 "$MIGRATION_OUTPUT_FILE" | tr -d '\r')"
+readarray -t cols < <(parse_csv_line "$header")
+
+ORG_IDX="$(find_col 'github_org')"
+REPO_IDX="$(find_col 'github_repository')"
+MIGRATION_ID_IDX="$(find_col 'migration_id')"
 
 tail -n +2 "$MIGRATION_OUTPUT_FILE" | while IFS= read -r line; do
   line="${line//$'\r'/}"
-  IFS=',' read -r org repo mig <<< "$line"
+  readarray -t flds < <(parse_csv_line "$line")
+
+  org="$(dequote "${flds[$ORG_IDX]:-}")"
+  repo="$(dequote "${flds[$REPO_IDX]:-}")"
+  mig="$(dequote "${flds[$MIGRATION_ID_IDX]:-}")"
+
+  [[ -z "$mig" ]] && continue
+
   echo "$org,$repo,$mig"
 done > "$INPUT_TMP"
 
 #########################################################
-## WORKER (unchanged logic)
+# Worker
 #########################################################
 
 run_monitor() {
@@ -163,30 +189,40 @@ export -f run_monitor
 export TARGET_API_URL RESULTS_TMP PER_MIGRATION_LOG_DIR
 
 #########################################################
-## FIXED PARALLEL EXECUTION (NO MONITOR PID BUG)
+# Run parallel (FIXED)
 #########################################################
 
-xargs -a "$INPUT_TMP" -P "$PARALLEL" -I {} bash -c 'run_monitor "$@"' _ {}
+xargs -a "$INPUT_TMP" -P "$PARALLEL" -I {} bash -c 'run_monitor "$@"' _ {} &
+WORKER_PID=$!
 
 #########################################################
-## CLEAN WAIT (NO tput / NO TERM / NO UI DEPENDENCY)
+# Polling loop (CI SAFE)
 #########################################################
 
-echo "[INFO] Waiting for all migrations to complete..."
+FIRST=true
 
-while [[ $(grep -c STARTED "$RESULTS_TMP" || true) -gt \
-        $(grep -c COMPLETED "$RESULTS_TMP" "$RESULTS_TMP" || true) ]]; do
-
+while kill -0 "$WORKER_PID" 2>/dev/null; do
   collect_status_snapshot
 
-  echo "[PROGRESS] ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS} | \
-Completed: ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | Running: ${SNAPSHOT_RUNNING}"
+  if [[ "$FIRST" == true ]]; then
+    FIRST=false
+  fi
+
+  echo "=================================================="
+  echo "[INFO] Monitoring migrations"
+  echo "Progress : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}"
+  echo "Completed: ${SNAPSHOT_COMPLETED}"
+  echo "Failed   : ${SNAPSHOT_FAILED}"
+  echo "Running  : ${SNAPSHOT_RUNNING}"
+  echo "=================================================="
 
   sleep "$INTERVAL"
 done
 
+wait "$WORKER_PID" || true
+
 #########################################################
-## FINAL OUTPUT BUILD
+# Final output
 #########################################################
 
 awk -F',' '
@@ -194,30 +230,28 @@ awk -F',' '
   latest[$3]=$0
 }
 END {
-  for (k in latest) {
-    print latest[k]
-  }
+  for (k in latest) print latest[k]
 }
-' "$RESULTS_TMP" | sort >> "$OUTPUT_FILE"
+' "$RESULTS_TMP" >> "$OUTPUT_FILE"
 
 rm -f "$RESULTS_TMP" "$INPUT_TMP"
 
 #########################################################
-## FINAL SUMMARY (UNCHANGED)
+# Summary
 #########################################################
 
 echo "FINAL SUMMARY"
-echo "=============="
+echo "============="
 
 TOTAL=$(wc -l < "$OUTPUT_FILE")
 SUCCESS=$(grep -c "COMPLETED" "$OUTPUT_FILE" || true)
 FAILED=$(grep -c "FAILED" "$OUTPUT_FILE" || true)
 
 echo "Total : $TOTAL"
-echo "OK    : $SUCCESS"
-echo "FAIL  : $FAILED"
+echo "Success: $SUCCESS"
+echo "Failed : $FAILED"
 
 if [[ "$FAILED" -gt 0 ]]; then
-  echo "Failed migrations exist"
+  echo "[ERROR] Some migrations failed"
   exit 1
 fi
