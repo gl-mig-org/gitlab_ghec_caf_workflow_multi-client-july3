@@ -148,8 +148,39 @@ After generation, edit the CSV and add two columns:
 - `github_org` : Target GitHub Org
 - `github_repo` : Target Repo Name
 - `gh_repo_visibility` : `public, private, internal`
-- `except_commit_comments` : `yes or no`
 
+### Optional Export Filters can be added in csv
+
+The inventory CSV supports the following optional columns:
+
+#### `include_in_export`
+- Used to export only specific GitLab entities.
+- Maps to the `gl-exporter --only` option.
+- Can be left empty.
+
+#### `exclude_from_export`
+- Used to exclude specific GitLab entities from the export.
+- Maps to the `gl-exporter --except` option.
+- Can be left empty.
+
+#### Supported Values
+The following values are supported:
+
+- merge_requests
+- issues
+- commit_comments
+- hooks
+- wiki
+
+#### Multiple Values
+Multiple values can be specified using the pipe (`|`) separator.
+
+Example:
+
+```csv
+include_in_export
+issues|merge_requests|commit_comments|hooks|wiki
+```
 Fill in the target GitHub organization and repository name for each row.
 
 #### Example Inventory CSV
@@ -165,9 +196,6 @@ Fill in the target GitHub organization and repository name for each row.
 - Columns `github_org`, `gh_repo_visibility` and `github_repo` must be populated before running the pipeline.
 - Upload the CSV to the GitHub repository.
 - This file name is passed as the `INVENTORY_FILE` input when running the pipeline.
-- Optional Columns `include_in_export` & `exclude_from_export` can be added to pass `merge_requests/issues/commit_comments/hooks/and wiki` if required or can be kept empty.
-- Optional Columns accepts multiple inputs with | (pipe) separated. e.g: "issues|merge_requests|commit_comments|hooks|wiki"
-- `include_in_export and exclude_from_export` cannot both be populated in the same row.
 
 ### 5.3 Upload Inventory to GitHub Repository
 Upload the updated CSV into the GitHub repository so the pipeline can access it.
