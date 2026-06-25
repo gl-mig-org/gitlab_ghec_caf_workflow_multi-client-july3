@@ -181,7 +181,9 @@ Example:
 include_in_export
 issues|merge_requests|commit_comments|hooks|wiki
 ```
-Fill in the target GitHub organization and repository name for each row.
+*Note: include_in_export and exclude_from_export are mutually exclusive. If both columns are populated for a repository row, that repository will fail validation and be skipped. The script will continue processing all remaining repositories in the inventory file.*
+
+| Fill in the target GitHub organization and repository name for each row. |
 
 #### Example Inventory CSV
 
@@ -331,7 +333,7 @@ Configure required reviewers in `approvers-group` to enforce manual approvals.
     - Installs or upgrades `gh-ado2gh`
     - Derives `TARGET_API_URL` based on `GH_HOST`
     - Reads `output_files/migration-outputs_*.csv`
-    - Runs `polling_monitoring.sh`
+    - Runs `gl2gh-monitor-migration-status.sh`
     - Uploads `migration-status.csv`
 
 11. Preserve artifacts
@@ -407,7 +409,7 @@ output_files/migration-outputs_*.csv
 - Runs:
 
 ```bash
-./polling_monitoring.sh
+./gl2gh-monitor-migration-status.sh
 ```
 
 Generated artifact:
