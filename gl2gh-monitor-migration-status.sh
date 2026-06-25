@@ -331,7 +331,8 @@ while kill -0 "$MONITOR_PID" 2>/dev/null; do
   if [[ "$FIRST_DISPLAY" == true ]]; then
     FIRST_DISPLAY=false
   else
-    if [[ -t 1 ]]; then tput cuu 6 2>/dev/null || true; fi
+    tput cuu 6 2>/dev/null || true
+    tput ed 2>/dev/null || true
   fi
 
 cat <<EOF
@@ -366,15 +367,16 @@ elapsed=$((now - MONITOR_START_TS))
 printf -v elapsed_hhmmss '%dm:%02ds' $((elapsed/60)) $((elapsed%60))
 
 if [[ "$FIRST_DISPLAY" != true ]]; then
-  if [[ -t 1 ]]; then tput cuu 6 2>/dev/null || true; fi
+  tput cuu 6 2>/dev/null || true
+  tput ed 2>/dev/null || true
 fi
 
 cat <<EOF
 ==================================================
 [$(date '+%H:%M:%S')] Monitoring migrations...
-Progress : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}
-Completed: ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | Running: ${SNAPSHOT_RUNNING}
-Elapsed  : ${elapsed_hhmmss}
+Completed : ${SNAPSHOT_FINISHED}/${TOTAL_MIGRATIONS}
+Success   : ${SNAPSHOT_COMPLETED} | Failed: ${SNAPSHOT_FAILED} | In-Progress: ${SNAPSHOT_RUNNING}
+Elapsed   : ${elapsed_hhmmss}
 ==================================================
 EOF
 
