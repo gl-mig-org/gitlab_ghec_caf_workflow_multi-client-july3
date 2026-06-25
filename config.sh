@@ -1,5 +1,5 @@
 ############################################################
-# CONFIG GITHUB URL 
+# CONFIG GITHUB URL
 ############################################################
 DISABLE_SSL=Y
 
@@ -21,6 +21,12 @@ GITHUB_UPLOAD_SCRIPT="$MIGRATION_SCRIPTS/upload-to-github-blob.sh"
 AZURE_UPLOAD_SCRIPT="$MIGRATION_SCRIPTS/upload-to-azure-blob.sh"
 AWS_UPLOAD_SCRIPT="$MIGRATION_SCRIPTS/upload-to-aws-blob.sh"
 GITHUB_ENV="$ARTIFACTS_DIR/github_env.txt"
+
+# Valid values allowed for include_in_export / exclude_from_export
+GL_EXPORTER_ALLOWED_MODELS="issues|merge_requests|commit_comments|hooks|wiki"
+
+# Additional gl-exporter arguments applied to all exports
+GL_EXPORTER_EXTRA_ARGS=""
 
 # --- Runner script to invoke JS scripts
 RUNNER_SCRIPT="$BASE_SCRIPT_LOC/runner.sh"
