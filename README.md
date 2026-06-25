@@ -156,8 +156,8 @@ Fill in the target GitHub organization and repository name for each row.
 
 | Namespace | Project | Commit_Count | Branch_Count | Full_URL | github_org | github_repo | gh_repo_visibility | include_in_export | exclude_from_export |
 | -------- | -------- | -------- | -------- | -------- | -------- | -------- |-------- | -------- | -------- |
-| demo-group/sub-group | demo-project | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project` | ghorg | demoproject | private/public/internal | merge_requests/issues/commit_comments/hooks/and wiki |
-| demo-group-1/sub-group-1 | demo-project-1 | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project-1` | ghorg | demoproject1 | private/public/internal | merge_requests/issues/commit_comments/hooks/and wiki |
+| demo-group/sub-group | demo-project | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project` | ghorg | demoproject | private/public/internal | merge_requests |
+| demo-group-1/sub-group-1 | demo-project-1 | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project-1` | ghorg | demoproject1 | private/public/internal | | commit_comments |
 
 **Notes**
 - The example shows only the minimum required columns.
