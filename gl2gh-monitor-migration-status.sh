@@ -30,7 +30,7 @@ LOG_FILE="${MONITOR_MIGRATION_LOG:-$LOG_DIR/monitor-migration}-${RUN_TS}.log"
 OUTPUT_FILE="$ARTIFACTS_DIR/migration-status-${RUN_TS}.csv"
 PER_MIGRATION_LOG_DIR="$LOG_DIR/monitor-migration-${RUN_TS}"
 
-INTERVAL=10
+INTERVAL=30
 
 mkdir -p "$LOG_DIR" "$ARTIFACTS_DIR" "$PER_MIGRATION_LOG_DIR"
 
