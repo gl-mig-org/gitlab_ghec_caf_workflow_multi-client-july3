@@ -1,12 +1,7 @@
 name: Setup Customer Environment
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment_name:
-        description: "Customer Environment Name (example: siemens)"
-        required: true
-        type: string
+  create: 
 
 permissions:
   contents: read
@@ -14,8 +9,12 @@ permissions:
 
 jobs:
   setup-environment:
+    if: |
+      github.event.ref_type == 'branch' &&
+      !startsWith(github.event.ref, 'feature/') &&
+      !startsWith(github.event.ref, 'bugfix/') &&
+      !startsWith(github.event.ref, 'hotfix/')
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
 
     env:
       GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -24,17 +23,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - name: Step 1/5 - Generate Environment Name
+      - name: Step 1/5 Generate Environment Name
         id: env-name
         run: |
-          ENV_NAME="${{ inputs.environment_name }}"
-
+          set -euo pipefail
+      
+          ENV_NAME="${{ github.event.ref }}"
+      
           echo "env_name=$ENV_NAME" >> "$GITHUB_OUTPUT"
-
-          echo ""
-          echo "Environment Configuration"
-          echo "------------------------"
-          echo "Environment Name : $ENV_NAME"
+      
+          echo "Environment Bootstrap Triggered"
+          echo "Branch: $ENV_NAME"
+          echo "Environment: $ENV_NAME"
+      
+                echo "env_name=$ENV_NAME" >> "$GITHUB_OUTPUT"
+      
+                echo ""
+                echo "Environment Configuration"
+                echo "------------------------"
+                echo "Environment Name : $ENV_NAME"
 
       - name: Step 2/5 - Create GitHub Environment
         env:
