@@ -1,7 +1,12 @@
 name: Setup Customer Environment
 
 on:
-  create:
+  workflow_dispatch:
+    inputs:
+      environment_name:
+        description: "Customer Environment Name (example: siemens)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -9,40 +14,31 @@ permissions:
 
 jobs:
   setup-environment:
-    if: github.event.ref_type == 'branch'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    env:
+      GH_TOKEN: ${{ secrets.GH_PAT }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          client-id: ${{ vars.APP_CLIENT_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Set Environment Name
-        id: env
+      - name: Step 1/5 - Generate Environment Name
+        id: env-name
         run: |
-          set -euo pipefail
-
-          ENV_NAME=$(echo "${{ github.event.ref }}" | tr '/' '-')
+          ENV_NAME="${{ inputs.environment_name }}"
 
           echo "env_name=$ENV_NAME" >> "$GITHUB_OUTPUT"
 
-          echo "=================================="
-          echo "Environment Bootstrap Triggered"
-          echo "=================================="
-          echo "Branch      : ${{ github.event.ref }}"
-          echo "Environment : $ENV_NAME"
-          echo "=================================="
+          echo ""
+          echo "Environment Configuration"
+          echo "------------------------"
+          echo "Environment Name : $ENV_NAME"
 
-      - name: Create GitHub Environment
+      - name: Step 2/5 - Create GitHub Environment
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          ENV_NAME: ${{ steps.env.outputs.env_name }}
+          ENV_NAME: ${{ steps.env-name.outputs.env_name }}
         run: |
           set -euo pipefail
 
@@ -52,7 +48,7 @@ jobs:
             --method PUT \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/repos/${{ github.repository }}/environments/$ENV_NAME" \
+            "repos/${{ github.repository }}/environments/$ENV_NAME" \
             --input - <<EOF
           {
             "deployment_branch_policy": {
@@ -62,46 +58,42 @@ jobs:
           }
           EOF
 
-          echo "Environment created/updated successfully"
+          echo "Environment created successfully"
 
-      - name: Configure Branch Policy
+      - name: Step 3/5 - Configure Branch Policy
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          ENV_NAME: ${{ steps.env.outputs.env_name }}
+          ENV_NAME: ${{ steps.env-name.outputs.env_name }}
         run: |
           set -euo pipefail
 
-          echo "Checking branch policy for: $ENV_NAME"
-
           EXISTING_POLICY=$(
             gh api \
-              "/repos/${{ github.repository }}/environments/$ENV_NAME/deployment-branch-policies" \
-              2>/dev/null \
-            | jq -r --arg BRANCH "$ENV_NAME" '
-                .branch_policies[]? |
-                select(.name == $BRANCH) |
-                .name
-              '
+              "repos/${{ github.repository }}/environments/$ENV_NAME/deployment-branch-policies" \
+              2>/dev/null |
+            jq -r --arg BRANCH "$ENV_NAME" '
+              .branch_policies[]? |
+              select(.name==$BRANCH) |
+              .name
+            '
           )
 
           if [[ "$EXISTING_POLICY" == "$ENV_NAME" ]]; then
-            echo "Branch policy already exists."
+            echo "Branch policy already exists"
           else
             gh api \
               --method POST \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${{ github.repository }}/environments/$ENV_NAME/deployment-branch-policies" \
+              "repos/${{ github.repository }}/environments/$ENV_NAME/deployment-branch-policies" \
               -f name="$ENV_NAME" \
-              -f type="branch"
+              -f type=branch
 
-            echo "Branch policy created."
+            echo "Branch policy created"
           fi
 
-      - name: Create Environment Variables
+      - name: Step 4/5 - Create Environment Variables
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          ENV_NAME: ${{ steps.env.outputs.env_name }}
+          ENV_NAME: ${{ steps.env-name.outputs.env_name }}
         run: |
           set -euo pipefail
 
@@ -116,33 +108,29 @@ jobs:
             "AWS_REGION"
           )
 
+          EXISTING=$(gh variable list \
+            --env "$ENV_NAME" \
+            --repo "${{ github.repository }}" \
+            2>/dev/null || true)
+
           for VAR in "${VARIABLES[@]}"; do
 
-            if gh variable list \
-              --env "$ENV_NAME" \
-              --repo "${{ github.repository }}" \
-              | awk '{print $1}' \
-              | grep -qx "$VAR"; then
-
-              echo "Variable already exists: $VAR"
-
-            else
-
-              gh variable set "$VAR" \
-                --env "$ENV_NAME" \
-                --repo "${{ github.repository }}" \
-                --body "__SET_ME__"
-
-              echo "Created variable: $VAR"
-
+            if echo "$EXISTING" | grep -q "^$VAR"; then
+              echo "Variable exists: $VAR"
+              continue
             fi
 
+            gh variable set "$VAR" \
+              --env "$ENV_NAME" \
+              --repo "${{ github.repository }}" \
+              --body "__SET_ME__"
+
+            echo "Created variable: $VAR"
           done
 
-      - name: Create Environment Secrets
+      - name: Step 5/5 - Create Environment Secrets
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          ENV_NAME: ${{ steps.env.outputs.env_name }}
+          ENV_NAME: ${{ steps.env-name.outputs.env_name }}
         run: |
           set -euo pipefail
 
@@ -155,63 +143,39 @@ jobs:
             "AWS_SECRET_ACCESS_KEY"
           )
 
+          EXISTING=$(gh secret list \
+            --env "$ENV_NAME" \
+            --repo "${{ github.repository }}" \
+            2>/dev/null || true)
+
           for SECRET in "${SECRETS[@]}"; do
 
-            if gh secret list \
-              --env "$ENV_NAME" \
-              --repo "${{ github.repository }}" \
-              | awk '{print $1}' \
-              | grep -qx "$SECRET"; then
-
-              echo "Secret already exists: $SECRET"
-
-            else
-
-              echo "__SET_ME__" | gh secret set "$SECRET" \
-                --env "$ENV_NAME" \
-                --repo "${{ github.repository }}"
-
-              echo "Created secret: $SECRET"
-
+            if echo "$EXISTING" | grep -q "^$SECRET"; then
+              echo "Secret exists: $SECRET"
+              continue
             fi
 
+            echo "__SET_ME__" | gh secret set "$SECRET" \
+              --env "$ENV_NAME" \
+              --repo "${{ github.repository }}"
+
+            echo "Created secret: $SECRET"
           done
 
-      - name: Setup Summary
+      - name: Summary
         env:
-          ENV_NAME: ${{ steps.env.outputs.env_name }}
+          ENV_NAME: ${{ steps.env-name.outputs.env_name }}
         run: |
           echo ""
-          echo "=========================================="
+          echo "================================="
           echo "Environment Setup Complete"
-          echo "=========================================="
+          echo "================================="
           echo "Environment : $ENV_NAME"
-          echo "Branch      : $ENV_NAME"
+          echo "Allowed Branch : $ENV_NAME"
           echo ""
-
-          echo "Variables Created:"
-          echo " - SOURCE_GL_SERVER_URL"
-          echo " - GITLAB_USERNAME"
-          echo " - GH_HOST"
-          echo " - GL_EXPORTER_REPO_URL"
-          echo " - STORAGE_TYPE"
-          echo " - AZ_CONTAINER"
-          echo " - AWS_BUCKET_NAME"
-          echo " - AWS_REGION"
-          echo ""
-
-          echo "Secrets Created:"
-          echo " - GITLAB_API_PRIVATE_TOKEN"
-          echo " - GH_PAT"
-          echo " - GLXREPO_GH_PAT"
-          echo " - AZURE_STORAGE_CONNECTION_STRING"
-          echo " - AWS_ACCESS_KEY_ID"
-          echo " - AWS_SECRET_ACCESS_KEY"
-          echo ""
-
           echo "Next Steps:"
-          echo "1. Populate environment variables."
-          echo "2. Populate environment secrets."
-          echo "3. Test environment creation."
-          echo "4. Migration workflow remains unchanged."
-          echo "=========================================="
+          echo "1. Populate Variables"
+          echo "2. Populate Secrets"
+          echo "3. Test Migration Workflow"
+          echo ""
+          echo "Migration Workflow remains unchanged."
