@@ -25,6 +25,8 @@ jobs:
 
       - name: Step 1/5 Generate Environment Name
         id: env-name
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
       
@@ -46,6 +48,7 @@ jobs:
       - name: Step 2/5 - Create GitHub Environment
         env:
           ENV_NAME: ${{ steps.env-name.outputs.env_name }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
 
@@ -70,6 +73,7 @@ jobs:
       - name: Step 3/5 - Configure Branch Policy
         env:
           ENV_NAME: ${{ steps.env-name.outputs.env_name }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
 
@@ -101,6 +105,7 @@ jobs:
       - name: Step 4/5 - Create Environment Variables
         env:
           ENV_NAME: ${{ steps.env-name.outputs.env_name }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
 
@@ -138,6 +143,7 @@ jobs:
       - name: Step 5/5 - Create Environment Secrets
         env:
           ENV_NAME: ${{ steps.env-name.outputs.env_name }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
 
@@ -172,6 +178,7 @@ jobs:
       - name: Summary
         env:
           ENV_NAME: ${{ steps.env-name.outputs.env_name }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           echo ""
           echo "================================="
