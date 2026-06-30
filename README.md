@@ -258,7 +258,7 @@ Create the following GitHub environment:
 
 GitHub Repository → Settings → Environments → <APPROVERS_GROUP_ENV_NAME>
 
-- Example:
+Give the group name as:
 ```text
 approvers-group
 ```
