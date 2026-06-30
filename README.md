@@ -109,7 +109,7 @@ https://docs.github.com/en/enterprise-cloud@latest/migrations/ado/managing-acces
 | `upload-gl-migration-archive.sh` | Uploads generated archives to the configured intermediate storage. |
 | `start-gl2gh-repo-migration.sh` | Starts GitLab to GitHub repository migration jobs in GitHub. |
 | `gl2gh-monitor-migration-status.sh` | Monitors repository migration status and generates `migration-status.csv`. |
-| `gl-post-migration-validation.sh` | Compares branch and commit counts between GitLab and GitHub to validate migration. This script is not part of the main migration pipeline and must be run manually after migration completes. |
+| `gl-post-migration-validation.sh` | Compares branch and commit counts between GitLab and GitHub to validate migration. |
 
 ### 4.2 Scripts in `migration_scripts/` Directory
 This directory contains JavaScript modules and helper scripts used to orchestrate GitHub migration operations.
@@ -145,12 +145,12 @@ gh gitlab-stats --hostname "gitlab.company.com" --token "glpat-xxxx" --namespace
 This produces a CSV inventory of repositories.
 
 ### 5.2 Edit Inventory CSV
-After generation, edit the CSV and add two columns:
+After generation, edit the CSV and add the following columns:
 - `github_org` : Target GitHub Org
 - `github_repo` : Target Repo Name
-- `gh_repo_visibility` : `public, private, internal`
+- `gh_repo_visibility` : Supported values: `public, private, internal`
 
-### Optional Export Filters can be added in csv
+### Optional Export Filters in the Inventory CSV
 
 The inventory CSV supports the following optional columns:
 
@@ -174,7 +174,7 @@ The following values are supported:
 - wiki
 
 #### Multiple Values
-Multiple values can be specified using the pipe (`|`) separator.
+Multiple values can be specified using the pipe (`|`) separator. Comma-separated values are not supported for `include_in_export` and `exclude_from_export` columns.
 
 Example:
 
@@ -190,8 +190,8 @@ issues|merge_requests|commit_comments|hooks|wiki
 
 | Namespace | Project | Commit_Count | Branch_Count | Full_URL | github_org | github_repo | gh_repo_visibility | include_in_export | exclude_from_export |
 | -------- | -------- | -------- | -------- | -------- | -------- | -------- |-------- | -------- | -------- |
-| demo-group/sub-group | demo-project | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project` | ghorg | demoproject | private/public/internal | merge_requests |
-| demo-group-1/sub-group-1 | demo-project-1 | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project-1` | ghorg | demoproject1 | private/public/internal | | commit_comments |
+| demo-group/sub-group | demo-project | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project` | ghorg | demoproject | private | merge_requests |
+| demo-group-1/sub-group-1 | demo-project-1 | 20 | 1 | `http://gitlab-server/demo-group/sub-group/demo-project-1` | ghorg | demoproject1 | public | | commit_comments |
 
 **Notes**
 - The example shows only the minimum required columns.
@@ -247,8 +247,8 @@ Jobs that use this environment:
 
 | Name | Description |
 |------|-------------|
-| GITLAB_API_PRIVATE_TOKEN | GitLab token |
-| GH_PAT | GitHub PAT |
+| GITLAB_API_PRIVATE_TOKEN | GitLab token with required access |
+| GH_PAT | GitHub Personal Access Token with required scopes |
 | AZURE_STORAGE_CONNECTION_STRING | Required only if STORAGE_TYPE = Azure |
 | AWS_ACCESS_KEY_ID | Required only if STORAGE_TYPE = AWS |
 | AWS_SECRET_ACCESS_KEY | Required only if STORAGE_TYPE = AWS |
@@ -324,6 +324,9 @@ Configure required reviewers in `approvers-group` to enforce manual approvals.
 10. Monitor repository migrations
     - Authenticates GitHub CLI
     - Installs or upgrades `gh-ado2gh`
+
+      **Note:** Repository migration monitoring is performed using GitHub migration APIs exposed through the gh-ado2gh extension.
+
     - Derives `TARGET_API_URL` based on `GH_HOST`
     - Reads `output_files/migration-outputs_*.csv`
     - Runs `gl2gh-monitor-migration-status.sh`
