@@ -215,6 +215,22 @@ Secrets           : Created with __SET_ME__ placeholder
 
 ---
 
+### Optional Cleanup
+
+The workflow creates variables and secrets for all supported storage types (GitHub, Azure, and AWS).
+
+After the environment is created, review the generated variables and secrets and remove any entries that are not applicable to your migration setup.
+
+For example:
+
+- If using Azure Storage, AWS-related variables and secrets can be removed.
+- If using AWS Storage, Azure-related variables and secrets can be removed.
+- If using GitHub Storage, Azure and AWS-specific variables and secrets can be removed.
+
+Only the variables and secrets required for your selected storage type need to be retained.
+
+> Note: Removal of unused variables and secrets is optional. They do not impact workflow execution if left in place.
+
 ## Post-Setup Actions
 
 After the workflow completes successfully, update the created environment values manually.
