@@ -203,51 +203,22 @@ issues|merge_requests|commit_comments|hooks|wiki
 ### 5.3 Upload Inventory to GitHub Repository
 Upload the updated CSV into the GitHub repository so the pipeline can access it.
 
-## 6. CI/CD Variable Setup (GitHub Environment)
+## 6. GitHub Environment Setup
 
-All variables and secrets must be configured at the **GitHub Environment level**, not at the repository level.
+The workflow uses two types of GitHub environments:
+
+### 6.1 CI/CD Variable Setup (Environment Variables)
+Create a GitHub environment that contains the customer's variables and secrets. All variables and secrets must be configured at the **GitHub Environment level**, not at the repository level.
 
 Navigate to:
 
 GitHub Repository → Settings → Environments → <ENVIRONMENT_NAME>
-
----
-
-### Environment Variables
-
-| Name | Description |
-|------|-------------|
-| SOURCE_GL_SERVER_URL | https://gitlab.company.com |
-| GITLAB_USERNAME | gitlab-user |
-| GH_HOST | github.com or SUBDOMAIN.ghe.com |
-| STORAGE_TYPE | GITHUB / AZURE / AWS |
-| AZ_CONTAINER | Required only if STORAGE_TYPE = Azure |
-| AWS_BUCKET_NAME | Required only if STORAGE_TYPE = AWS |
-| AWS_REGION | Required only if STORAGE_TYPE = AWS |
-
----
-
-### Environment Secrets
-
-| Name | Description |
-|------|-------------|
-| GITLAB_API_PRIVATE_TOKEN | GitLab token |
-| GH_PAT | GitHub PAT |
-| AZURE_STORAGE_CONNECTION_STRING | Required only if STORAGE_TYPE = Azure |
-| AWS_ACCESS_KEY_ID | Required only if STORAGE_TYPE = AWS |
-| AWS_SECRET_ACCESS_KEY | Required only if STORAGE_TYPE = AWS |
-
-## 7. GitHub Environment Setup
-
-The workflow uses two types of GitHub environments:
-
-### 7.1 Client Configuration Environment
-Create a GitHub environment that contains the customer's variables and secrets.
+- Example ENVIRONMENT_NAME: `customer-prod-env`
 
 This environment name is provided during workflow execution using the input:
-
+- Example:
 ```text
-ENVIRONMENT_NAME
+customer-prod-env
 ```
 
 Jobs that use this environment:
@@ -260,9 +231,34 @@ Jobs that use this environment:
 - `display-migration-summary`
 - `monitor-repository-migrations`
 
-### 7.2 Approval Environment
+#### Environment Variables
+
+| Name | Description |
+|------|-------------|
+| SOURCE_GL_SERVER_URL | https://gitlab.company.com |
+| GITLAB_USERNAME | gitlab-user |
+| GH_HOST | github.com or SUBDOMAIN.ghe.com |
+| STORAGE_TYPE | GITHUB / AZURE / AWS |
+| AZ_CONTAINER | Required only if STORAGE_TYPE = Azure |
+| AWS_BUCKET_NAME | Required only if STORAGE_TYPE = AWS |
+| AWS_REGION | Required only if STORAGE_TYPE = AWS |
+
+#### Environment Secrets
+
+| Name | Description |
+|------|-------------|
+| GITLAB_API_PRIVATE_TOKEN | GitLab token |
+| GH_PAT | GitHub PAT |
+| AZURE_STORAGE_CONNECTION_STRING | Required only if STORAGE_TYPE = Azure |
+| AWS_ACCESS_KEY_ID | Required only if STORAGE_TYPE = AWS |
+| AWS_SECRET_ACCESS_KEY | Required only if STORAGE_TYPE = AWS |
+
+### 6.2 Approval Environment
 Create the following GitHub environment:
 
+GitHub Repository → Settings → Environments → <APPROVERS_GROUP_ENV_NAME>
+
+- Example:
 ```text
 approvers-group
 ```
@@ -273,7 +269,7 @@ This environment is used for manual approval gates:
 
 Configure required reviewers in `approvers-group` to enforce manual approvals.
 
-## 8. Pipeline Flow
+## 7. Pipeline Flow
 
 1. Getting environment ready
    - Validates Ubuntu runner
@@ -336,10 +332,10 @@ Configure required reviewers in `approvers-group` to enforce manual approvals.
 11. Preserve artifacts
     - Output files, logs, summaries, and monitoring reports are uploaded as workflow artifacts.
 
-## 8.1 Pipeline Trigger
+## 7.1 Pipeline Trigger
 The pipeline is manually triggered from GitHub Actions.
 
-## 8.2 Executing the Pipeline
+## 7.2 Executing the Pipeline
 
 1. Open the GitHub repository.
 2. Navigate to **Actions → GitLab to GitHub Migration Pipeline**.
@@ -363,7 +359,7 @@ The pipeline is manually triggered from GitHub Actions.
 
 5. Select **Run workflow** to start.
 
-## 8.3 Artifacts and Retention
+## 7.3 Artifacts and Retention
 The pipeline uploads artifacts to support troubleshooting.
 
 Artifacts include:
@@ -378,11 +374,11 @@ Artifacts include:
 
 Artifact retention is configured in the workflow using `retention-days: 7`.
 
-## 9. Monitor the Status of Migration
+## 8. Monitor the Status of Migration
 
 Migration monitoring can be performed through the pipeline or manually.
 
-### 9.1 Automated Monitoring Through Pipeline
+### 8.1 Automated Monitoring Through Pipeline
 The workflow includes an automated monitoring stage:
 
 ```text
@@ -415,7 +411,7 @@ Generated artifact:
 migration-status.csv
 ```
 
-### 9.2 Manual Monitoring by Migration ID
+### 8.2 Manual Monitoring by Migration ID
 
 #### GitHub Enterprise Cloud without Data Residency
 
@@ -429,7 +425,7 @@ gh ado2gh wait-for-migration --migration-id <migration-id>
 gh ado2gh wait-for-migration --migration-id <migration-id> --target-api-url "https://api.SUBDOMAIN.ghe.com"
 ```
 
-### 9.3 Monitor Migrations with GitHub Extension - gh-migration-monitor
+### 8.3 Monitor Migrations with GitHub Extension - gh-migration-monitor
 
 #### GitHub Enterprise Cloud without Data Residency
 
@@ -443,9 +439,9 @@ gh migration-monitor --organization <GH_ORG> --github-token <GH_PAT>
 gh-migration-monitor extension is not supported for GitHub Enterprise Cloud with Data Residency.
 ```
 
-## 10. User Identity Mapping - Mannequins
+## 9. User Identity Mapping - Mannequins
 
-### 10.1 Generate Mannequins
+### 9.1 Generate Mannequins
 
 #### GitHub Enterprise Cloud without Data Residency
 
@@ -459,7 +455,7 @@ gh ado2gh generate-mannequin-csv --github-org "{github-org}"
 gh ado2gh generate-mannequin-csv --github-org "{github-org}" --target-api-url https://api.SUBDOMAIN.ghe.com
 ```
 
-### 10.2 Update Mannequin Mapping
+### 9.2 Update Mannequin Mapping
 Open `mannequins.csv` and populate the **Target User** column with valid GitHub usernames.
 
 #### Mannequin User Mapping Example
@@ -474,7 +470,7 @@ Open `mannequins.csv` and populate the **Target User** column with valid GitHub 
 - The `target-user` column must be updated with the correct GitHub username.
 - This mapping is later used to reclaim mannequins and associate commits, issues, and comments with real GitHub users.
 
-### 11.3 Reclaim Mannequins
+### 9.3 Reclaim Mannequins
 
 #### GitHub Enterprise Cloud without Data Residency
 
@@ -488,16 +484,16 @@ gh ado2gh reclaim-mannequin --github-org "{github-org}" --csv $CSV_FILE --skip-i
 gh ado2gh reclaim-mannequin --github-org "{github-org}" --csv $CSV_FILE --skip-invitation --target-api-url https://api.SUBDOMAIN.ghe.com
 ```
 
-## 11. Appendix
+## 10. Appendix
 
-### 11.1 Install GitHub CLI
+### 10.1 Install GitHub CLI
 Install GitHub CLI by following the official installation documentation:
 
 ```text
 https://github.com/cli/cli#installation
 ```
 
-### 11.2 Install GitHub CLI Extensions
+### 10.2 Install GitHub CLI Extensions
 The workflow automatically installs or upgrades the required GitHub CLI extensions during the `getting-env-ready` job.
 
 Required extensions:
@@ -519,7 +515,7 @@ gh extension install https://github.com/mona-actions/gh-migration-monitor
 gh extension install https://github.com/github/gh-ado2gh
 ```
 
-### 11.3 Build gl-exporter Docker Image
+### 10.3 Build gl-exporter Docker Image
 The pipeline builds the `gl-exporter` Docker image automatically during the archive generation stage if it is not already present.
 
 Manual build command:
