@@ -230,6 +230,7 @@ Jobs that use this environment:
 - `start-repository-migration`
 - `display-migration-summary`
 - `monitor-repository-migrations`
+- `post-migration-validation`
 
 #### Environment Variables
 
@@ -324,7 +325,7 @@ Configure required reviewers in `approvers-group` to enforce manual approvals.
 10. Monitor repository migrations
     - Authenticates GitHub CLI
     - Installs or upgrades `gh-ado2gh`
-
+      
       **Note:** Repository migration monitoring is performed using GitHub migration APIs exposed through the gh-ado2gh extension.
 
     - Derives `TARGET_API_URL` based on `GH_HOST`
@@ -332,7 +333,12 @@ Configure required reviewers in `approvers-group` to enforce manual approvals.
     - Runs `gl2gh-monitor-migration-status.sh`
     - Uploads `migration-status.csv`
 
-11. Preserve artifacts
+11. Post-migration validation
+    - Reads inventory file and validates successfully migrated repositories in GitHub
+    - Validates branch and commit counts by running `gl-post-migration-validation.sh`
+    - Uploads post-validation reports and logs
+
+12. Preserve artifacts
     - Output files, logs, summaries, and monitoring reports are uploaded as workflow artifacts.
 
 ## 7.1 Pipeline Trigger
