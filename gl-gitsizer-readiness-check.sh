@@ -244,6 +244,7 @@ create_repo_list() {
 
     BEGIN {
       repo_url_count = 0
+      repo_url_keys[++repo_url_count] = "full_url"
       repo_url_keys[++repo_url_count] = "http_url_to_repo"
       repo_url_keys[++repo_url_count] = "https_url_to_repo"
       repo_url_keys[++repo_url_count] = "clone_url"
@@ -251,6 +252,7 @@ create_repo_list() {
       repo_url_keys[++repo_url_count] = "repository_url"
       repo_url_keys[++repo_url_count] = "url"
       repo_url_keys[++repo_url_count] = "web_url"
+
 
       project_path_count = 0
       project_path_keys[++project_path_count] = "path_with_namespace"
