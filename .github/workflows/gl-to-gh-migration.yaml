@@ -216,6 +216,23 @@ jobs:
           echo "npm Version    : $(npm --version)"
           echo "GH CLI Version : $(gh --version | head -n1)"
 
+          if [[ "$STORAGE_TYPE" == "AZURE" ]]; then
+              command -v az >/dev/null 2>&1 || {
+                  echo "[ERROR] Azure CLI (az) is required for STORAGE_TYPE=AZURE"
+                  exit 1
+              }
+              echo "[INFO] Azure CLI detected: $(az version | jq -r '."azure-cli"')"
+          fi
+
+          if [[ "$STORAGE_TYPE" == "AWS" ]]; then
+              command -v aws >/dev/null 2>&1 || {
+                  echo "[ERROR] AWS CLI (aws) is required for STORAGE_TYPE=AWS"
+                  exit 1
+              }
+          
+              echo "[INFO] AWS CLI detected: $(aws --version)"
+          fi
+          
           printf '\n'
           echo "[INFO] Listing npm packages..."
           npm list @octokit/rest @octokit/graphql || true
@@ -319,9 +336,9 @@ jobs:
 
           # Validate GITHUB_TYPE input
           if [[ "$GITHUB_TYPE" == "GitHub" ]]; then
-            echo "[INFO] GITHUB_TYPE=$GITHUB_TYPE"
+            echo "[INFO] GITHUB_TYPE: $GITHUB_TYPE"
           elif [[ "$GITHUB_TYPE" == "GitHubDR" ]]; then
-            echo "[INFO] GITHUB_TYPE=$GITHUB_TYPE"
+            echo "[INFO] GITHUB_TYPE: $GITHUB_TYPE"
           else
             echo "[ERROR] Invalid GITHUB_TYPE: $GITHUB_TYPE"
             echo "Allowed values: GitHub or GitHubDR"
@@ -1067,16 +1084,7 @@ jobs:
           name: start-repository-migration-artifacts
           path: .
   
-      # ✅ Auth
-      # - name: Authenticate GitHub CLI
-      #   shell: bash
-      #   run: |
-      #     set -euo pipefail
-      #     unset GH_TOKEN
-      #     echo "$GH_PAT" | gh auth login --with-token --hostname "$GH_HOST"
-      #     gh auth status
-  
-      # ✅ Install extension (CRITICAL)
+      # ✅ Install GH CLI extension
       - name: Install gh-ado2gh extension
         shell: bash
         run: |
