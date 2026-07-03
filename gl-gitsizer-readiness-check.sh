@@ -176,43 +176,101 @@ install_git_sizer() {
 
 # ------------------------------------------------------------
 # Create repository list from gitlab-stats.csv
+# Robust header detection: handles \r, BOM, quoted headers
 # ------------------------------------------------------------
 create_repo_list() {
 
   echo "[INFO] Reading repositories from $INVENTORY_FILE"
 
-  awk -F',' '
-  NR==1 {
-      for(i=1;i<=NF;i++) {
-          gsub(/"/,"",$i)
+  # Strip BOM and CRLF to avoid header mismatch
+  CLEAN_CSV="$OUT_DIR/gitlab-stats.cleaned.csv"
+  sed '1s/^\xEF\xBB\xBF//' "$INVENTORY_FILE" | tr -d '\r' > "$CLEAN_CSV"
 
-          if(tolower($i)=="namespace")
+  echo
+  echo "===== CSV HEADER (first line) ====="
+  head -n 1 "$CLEAN_CSV"
+  echo
+
+  echo "===== CSV FIRST DATA ROW ====="
+  sed -n '2p' "$CLEAN_CSV"
+  echo
+
+  awk -F',' '
+  function trim(s) {
+    gsub(/^[ \t\r\n"]+|[ \t\r\n"]+$/, "", s)
+    return s
+  }
+
+  NR==1 {
+      ns=0; proj=0; url=0
+
+      for(i=1;i<=NF;i++) {
+          header = trim($i)
+          header_l = tolower(header)
+
+          if(header_l=="namespace")
               ns=i
 
-          if(tolower($i)=="project")
+          if(header_l=="project")
               proj=i
 
-          if(tolower($i)=="full_url")
+          if(header_l=="full_url")
               url=i
       }
+
+      print "[INFO] Detected column indices -> namespace=" ns "  project=" proj "  full_url=" url > "/dev/stderr"
+
+      if(ns==0) {
+          print "[ERROR] Column [Namespace] not found in header" > "/dev/stderr"
+          exit 2
+      }
+
+      if(proj==0) {
+          print "[ERROR] Column [Project] not found in header" > "/dev/stderr"
+          exit 2
+      }
+
+      if(url==0) {
+          print "[ERROR] Column [Full_URL] not found in header" > "/dev/stderr"
+          print "[ERROR] Available headers:" > "/dev/stderr"
+
+          for(i=1;i<=NF;i++) {
+              print "  - " trim($i) > "/dev/stderr"
+          }
+
+          exit 2
+      }
+
       next
   }
 
   {
-      namespace=$ns
-      project=$proj
-      repo_url=$url
+      namespace = trim($ns)
+      project   = trim($proj)
+      repo_url  = trim($url)
 
-      gsub(/"/,"",namespace)
-      gsub(/"/,"",project)
-      gsub(/"/,"",repo_url)
+      # Skip garbage rows
+      if(repo_url=="" || repo_url=="false" || repo_url=="true")
+          next
 
-      if(repo_url=="")
+      # Only allow http/https URLs
+      if(repo_url !~ /^https?:\/\//)
           next
 
       print project "\t" repo_url "\t" namespace "/" project
+      count++
   }
-  ' "$INVENTORY_FILE" > "$REPO_LIST_TSV"
+
+  END {
+      if(count==0) {
+          print "[ERROR] No valid repositories found from inventory file" > "/dev/stderr"
+          exit 3
+      }
+  }
+  ' "$CLEAN_CSV" > "$REPO_LIST_TSV" || {
+    echo "[ERROR] Failed to parse inventory file. See errors above."
+    exit 1
+  }
 
   echo "[INFO] Repository list generated: $REPO_LIST_TSV"
   echo "[INFO] Repository count: $(wc -l < "$REPO_LIST_TSV" | tr -d ' ')"
@@ -313,21 +371,20 @@ EOF
 }
 
 # ------------------------------------------------------------
-# Run GitSizer discovery (report only, no hard fail on large files)
+# Run GitSizer discovery
+# Reports large files as WARNING; only clone failures fail the job.
 # ------------------------------------------------------------
 run_checks() {
   local total_repos=0
   local failed_clone_repos=0
   local passed_repos=0
   local warning_repos=0
-
-  # Only clone failures cause script to exit non-zero.
-  # Large files are reported as WARNINGS in the artifact.
   local clone_failure=0
 
-  # Repos with large files (for warning summary)
   local warning_summary_file="$OUT_DIR/warning-summary.txt"
+  local clone_failures_file="$OUT_DIR/clone-failures.txt"
   : > "$warning_summary_file"
+  : > "$clone_failures_file"
 
   create_askpass
 
@@ -347,7 +404,7 @@ run_checks() {
     rm -rf "$repo_dir"
 
     if ! git clone --mirror "$repo_url" "$repo_dir"; then
-      echo "[ERROR] Failed to clone repository: $repo_url"
+      echo "[WARNING] Failed to clone repository: $repo_url"
 
       append_summary \
         "$repo_name" \
@@ -357,6 +414,8 @@ run_checks() {
         "0" \
         "0" \
         "FAILED_CLONE"
+
+      echo "  - $repo_name  ($project_path)  URL: $repo_url" >> "$clone_failures_file"
 
       clone_failure=1
       failed_clone_repos=$((failed_clone_repos + 1))
@@ -482,15 +541,15 @@ run_checks() {
     echo "=========================================="
     echo "GitSizer Readiness Final Report"
     echo "=========================================="
-    echo "Total repositories checked : $total_repos"
-    echo "Passed repositories        : $passed_repos"
-    echo "Repos with WARNING (> ${THRESHOLD_MB} MB files) : $warning_repos"
-    echo "Failed to clone            : $failed_clone_repos"
-    echo "Threshold                  : ${THRESHOLD_MB} MB"
-    echo "Summary CSV                : $SUMMARY_CSV"
-    echo "Large files CSV            : $LARGE_FILES_CSV"
-    echo "GitSizer JSON reports      : $OUT_DIR/gitsizer-json"
-    echo "GitSizer text reports      : $OUT_DIR/gitsizer-text"
+    echo "Total repositories checked       : $total_repos"
+    echo "Passed repositories              : $passed_repos"
+    echo "Warning repos (> ${THRESHOLD_MB} MB files)   : $warning_repos"
+    echo "Failed to clone                  : $failed_clone_repos"
+    echo "Threshold                        : ${THRESHOLD_MB} MB"
+    echo "Summary CSV                      : $SUMMARY_CSV"
+    echo "Large files CSV                  : $LARGE_FILES_CSV"
+    echo "GitSizer JSON reports            : $OUT_DIR/gitsizer-json"
+    echo "GitSizer text reports            : $OUT_DIR/gitsizer-text"
     echo "=========================================="
 
     if [[ "$warning_repos" -gt 0 ]]; then
@@ -507,8 +566,12 @@ run_checks() {
     if [[ "$failed_clone_repos" -gt 0 ]]; then
       echo
       echo "=========================================="
-      echo "ERRORS - Repositories failed to clone"
+      echo "CLONE FAILURES (not fatal - reported only)"
       echo "=========================================="
+      echo "The following repositories could not be cloned. Review them before migration:"
+      echo
+      cat "$clone_failures_file"
+      echo
       echo "See log for details: $LOG_FILE"
     fi
   } | tee "$FINAL_REPORT"
@@ -516,21 +579,27 @@ run_checks() {
   # ------------------------------------------------------------
   # Exit strategy
   # ------------------------------------------------------------
-  # Do NOT fail the pipeline when large files are found.
-  # Only fail if clone actually failed for one or more repositories.
-  if [[ "$clone_failure" -ne 0 ]]; then
+  # Discovery stage should not block migration. It reports only.
+  # If ALL repositories failed to clone, then fail (likely inventory/config issue).
+  if [[ "$total_repos" -gt 0 && "$failed_clone_repos" -eq "$total_repos" ]]; then
     echo
-    echo "[ERROR] GitSizer readiness check completed with clone failures."
+    echo "[ERROR] All repositories failed to clone."
+    echo "[ERROR] This likely indicates an inventory file or credential issue."
     echo "[ERROR] See '$FINAL_REPORT' and '$LOG_FILE' for details."
     exit 1
   fi
 
   echo
-  echo "[INFO] GitSizer readiness check completed successfully."
+  echo "[INFO] GitSizer readiness check completed."
 
   if [[ "$warning_repos" -gt 0 ]]; then
     echo "[WARNING] $warning_repos repositor(y/ies) contain file(s) above ${THRESHOLD_MB} MB."
     echo "[WARNING] Review '$FINAL_REPORT' and '$LARGE_FILES_CSV' before starting migration."
+  fi
+
+  if [[ "$failed_clone_repos" -gt 0 ]]; then
+    echo "[WARNING] $failed_clone_repos repositor(y/ies) could not be cloned."
+    echo "[WARNING] Review '$FINAL_REPORT' and '$LOG_FILE'."
   fi
 }
 
