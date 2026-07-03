@@ -176,13 +176,14 @@ install_git_sizer() {
 
 # ------------------------------------------------------------
 # Create repository list from gitlab-stats.csv
-# Robust header detection: handles \r, BOM, quoted headers
+# Header-independent: Extract URL by pattern (http:// or https://)
+# and derive Namespace/Project from the URL path itself.
 # ------------------------------------------------------------
 create_repo_list() {
 
   echo "[INFO] Reading repositories from $INVENTORY_FILE"
 
-  # Strip BOM and CRLF to avoid header mismatch
+  # Strip BOM and CRLF
   CLEAN_CSV="$OUT_DIR/gitlab-stats.cleaned.csv"
   sed '1s/^\xEF\xBB\xBF//' "$INVENTORY_FILE" | tr -d '\r' > "$CLEAN_CSV"
 
@@ -195,74 +196,66 @@ create_repo_list() {
   sed -n '2p' "$CLEAN_CSV"
   echo
 
+  # ------------------------------------------------------------
+  # Header-independent extraction:
+  # For each data row, find the first field starting with http:// or https://
+  # Then extract namespace/project from the URL path.
+  # ------------------------------------------------------------
   awk -F',' '
   function trim(s) {
     gsub(/^[ \t\r\n"]+|[ \t\r\n"]+$/, "", s)
     return s
   }
 
-  NR==1 {
-      ns=0; proj=0; url=0
-
-      for(i=1;i<=NF;i++) {
-          header = trim($i)
-          header_l = tolower(header)
-
-          if(header_l=="namespace")
-              ns=i
-
-          if(header_l=="project")
-              proj=i
-
-          if(header_l=="full_url")
-              url=i
-      }
-
-      print "[INFO] Detected column indices -> namespace=" ns "  project=" proj "  full_url=" url > "/dev/stderr"
-
-      if(ns==0) {
-          print "[ERROR] Column [Namespace] not found in header" > "/dev/stderr"
-          exit 2
-      }
-
-      if(proj==0) {
-          print "[ERROR] Column [Project] not found in header" > "/dev/stderr"
-          exit 2
-      }
-
-      if(url==0) {
-          print "[ERROR] Column [Full_URL] not found in header" > "/dev/stderr"
-          print "[ERROR] Available headers:" > "/dev/stderr"
-
-          for(i=1;i<=NF;i++) {
-              print "  - " trim($i) > "/dev/stderr"
-          }
-
-          exit 2
-      }
-
-      next
-  }
+  NR==1 { next }  # skip header entirely - we detect URL by pattern
 
   {
-      namespace = trim($ns)
-      project   = trim($proj)
-      repo_url  = trim($url)
+      repo_url = ""
 
-      # Skip garbage rows
-      if(repo_url=="" || repo_url=="false" || repo_url=="true")
-          next
+      # Find the URL field by scanning all columns
+      for (i = 1; i <= NF; i++) {
+          v = trim($i)
 
-      # Only allow http/https URLs
-      if(repo_url !~ /^https?:\/\//)
+          if (v ~ /^https?:\/\/[^ ,]+/) {
+              repo_url = v
+              break
+          }
+      }
+
+      if (repo_url == "") {
+          print "[WARN] Skipping row - no http(s) URL field found" > "/dev/stderr"
           next
+      }
+
+      # Derive namespace/project from URL path
+      # Example: http://gitlabpoc.eastus.cloudapp.azure.com/migration-demo-group/btop
+      path = repo_url
+      sub(/^https?:\/\/[^\/]+\//, "", path)   # strip scheme + host
+      sub(/\.git$/, "", path)                  # strip .git if present
+      sub(/\/$/, "", path)                     # strip trailing slash
+
+      # namespace = everything before last "/"
+      # project   = last segment
+      n = split(path, parts, "/")
+
+      if (n < 2) {
+          print "[WARN] Skipping row - could not derive namespace/project from URL: " repo_url > "/dev/stderr"
+          next
+      }
+
+      project = parts[n]
+      namespace = parts[1]
+
+      for (i = 2; i < n; i++) {
+          namespace = namespace "/" parts[i]
+      }
 
       print project "\t" repo_url "\t" namespace "/" project
       count++
   }
 
   END {
-      if(count==0) {
+      if (count == 0) {
           print "[ERROR] No valid repositories found from inventory file" > "/dev/stderr"
           exit 3
       }
@@ -577,10 +570,9 @@ run_checks() {
   } | tee "$FINAL_REPORT"
 
   # ------------------------------------------------------------
-  # Exit strategy
+  # Exit strategy - discovery stage never blocks migration
+  # Only fail if ALL repos fail to clone (config/inventory issue)
   # ------------------------------------------------------------
-  # Discovery stage should not block migration. It reports only.
-  # If ALL repositories failed to clone, then fail (likely inventory/config issue).
   if [[ "$total_repos" -gt 0 && "$failed_clone_repos" -eq "$total_repos" ]]; then
     echo
     echo "[ERROR] All repositories failed to clone."
