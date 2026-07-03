@@ -24,6 +24,7 @@ TOOLS_DIR=".tools"
 SUMMARY_CSV="$OUT_DIR/repo-size-summary.csv"
 LARGE_FILES_CSV="$OUT_DIR/large-files-above-${THRESHOLD_MB}mb.csv"
 REPO_LIST_TSV="$OUT_DIR/repositories.tsv"
+FINAL_REPORT="$OUT_DIR/final-report.txt"
 
 mkdir -p "$OUT_DIR/gitsizer-json" \
          "$OUT_DIR/gitsizer-text" \
@@ -175,16 +176,14 @@ install_git_sizer() {
 
 # ------------------------------------------------------------
 # Create repository list from gitlab-stats.csv
-# No Python is used here.
-# This AWK parser handles normal CSV and quoted CSV fields.
 # ------------------------------------------------------------
 create_repo_list() {
 
+  echo "[INFO] Reading repositories from $INVENTORY_FILE"
+
   awk -F',' '
   NR==1 {
-
       for(i=1;i<=NF;i++) {
-
           gsub(/"/,"",$i)
 
           if(tolower($i)=="namespace")
@@ -196,12 +195,10 @@ create_repo_list() {
           if(tolower($i)=="full_url")
               url=i
       }
-
       next
   }
 
   {
-
       namespace=$ns
       project=$proj
       repo_url=$url
@@ -210,12 +207,20 @@ create_repo_list() {
       gsub(/"/,"",project)
       gsub(/"/,"",repo_url)
 
+      if(repo_url=="")
+          next
+
       print project "\t" repo_url "\t" namespace "/" project
   }
   ' "$INVENTORY_FILE" > "$REPO_LIST_TSV"
 
   echo "[INFO] Repository list generated: $REPO_LIST_TSV"
   echo "[INFO] Repository count: $(wc -l < "$REPO_LIST_TSV" | tr -d ' ')"
+
+  echo
+  echo "===== Repository List ====="
+  cat "$REPO_LIST_TSV"
+  echo
 }
 
 # ------------------------------------------------------------
@@ -281,7 +286,7 @@ append_large_files() {
       "$blob_sha" \
       "$blob_size_mb" \
       "$file_path" \
-      "FAILED" \
+      "WARNING_LARGE_FILE" \
       >> "$LARGE_FILES_CSV"
   done < "$large_tsv"
 }
@@ -308,13 +313,21 @@ EOF
 }
 
 # ------------------------------------------------------------
-# Run GitSizer and 400 MB blob/file validation
+# Run GitSizer discovery (report only, no hard fail on large files)
 # ------------------------------------------------------------
 run_checks() {
-  local overall_failure=0
   local total_repos=0
-  local failed_repos=0
+  local failed_clone_repos=0
   local passed_repos=0
+  local warning_repos=0
+
+  # Only clone failures cause script to exit non-zero.
+  # Large files are reported as WARNINGS in the artifact.
+  local clone_failure=0
+
+  # Repos with large files (for warning summary)
+  local warning_summary_file="$OUT_DIR/warning-summary.txt"
+  : > "$warning_summary_file"
 
   create_askpass
 
@@ -345,8 +358,8 @@ run_checks() {
         "0" \
         "FAILED_CLONE"
 
-      overall_failure=1
-      failed_repos=$((failed_repos + 1))
+      clone_failure=1
+      failed_clone_repos=$((failed_clone_repos + 1))
       continue
     fi
 
@@ -407,7 +420,8 @@ run_checks() {
     large_file_count="$(wc -l < "$large_tsv" | tr -d ' ')"
 
     if [[ "$large_file_count" -gt 0 ]]; then
-      echo "[ERROR] Repo has $large_file_count blob/file(s) above ${THRESHOLD_MB} MB"
+      echo "[WARNING] Repo '$repo_name' has $large_file_count blob/file(s) above ${THRESHOLD_MB} MB"
+      echo "[WARNING] These files must be reviewed before migration since GitHub does not support files above ${THRESHOLD_MB} MB."
 
       append_large_files \
         "$large_tsv" \
@@ -422,10 +436,26 @@ run_checks() {
         "$repo_size_mb" \
         "$largest_blob_mb" \
         "$large_file_count" \
-        "FAILED_LARGE_FILE_ABOVE_${THRESHOLD_MB}MB"
+        "WARNING_LARGE_FILE_ABOVE_${THRESHOLD_MB}MB"
 
-      overall_failure=1
-      failed_repos=$((failed_repos + 1))
+      {
+        echo "----------------------------------------"
+        echo "Repository : $repo_name"
+        echo "Path       : $project_path"
+        echo "Repo Size  : ${repo_size_mb} MB"
+        echo "Largest    : ${largest_blob_mb} MB"
+        echo "Files > ${THRESHOLD_MB} MB found: $large_file_count"
+        echo "----------------------------------------"
+
+        while IFS=$'\t' read -r blob_sha blob_size_mb file_path; do
+          [[ -z "${blob_sha:-}" ]] && continue
+          printf "  [WARN] %8.2f MB  %s  (blob: %s)\n" "$blob_size_mb" "$file_path" "$blob_sha"
+        done < "$large_tsv"
+
+        echo
+      } >> "$warning_summary_file"
+
+      warning_repos=$((warning_repos + 1))
     else
       echo "[INFO] No blobs/files above ${THRESHOLD_MB} MB found"
 
@@ -445,26 +475,63 @@ run_checks() {
 
   done < "$REPO_LIST_TSV"
 
-  echo
-  echo "=========================================="
-  echo "GitSizer Readiness Summary"
-  echo "=========================================="
-  echo "Total repositories checked : $total_repos"
-  echo "Passed repositories        : $passed_repos"
-  echo "Failed repositories        : $failed_repos"
-  echo "Summary CSV                : $SUMMARY_CSV"
-  echo "Large files CSV            : $LARGE_FILES_CSV"
-  echo "GitSizer JSON reports      : $OUT_DIR/gitsizer-json"
-  echo "GitSizer text reports      : $OUT_DIR/gitsizer-text"
-  echo "=========================================="
+  # ------------------------------------------------------------
+  # Final Report
+  # ------------------------------------------------------------
+  {
+    echo "=========================================="
+    echo "GitSizer Readiness Final Report"
+    echo "=========================================="
+    echo "Total repositories checked : $total_repos"
+    echo "Passed repositories        : $passed_repos"
+    echo "Repos with WARNING (> ${THRESHOLD_MB} MB files) : $warning_repos"
+    echo "Failed to clone            : $failed_clone_repos"
+    echo "Threshold                  : ${THRESHOLD_MB} MB"
+    echo "Summary CSV                : $SUMMARY_CSV"
+    echo "Large files CSV            : $LARGE_FILES_CSV"
+    echo "GitSizer JSON reports      : $OUT_DIR/gitsizer-json"
+    echo "GitSizer text reports      : $OUT_DIR/gitsizer-text"
+    echo "=========================================="
 
-  if [[ "$overall_failure" -ne 0 ]]; then
-    echo "[ERROR] GitSizer readiness check failed."
-    echo "[ERROR] One or more repositories have files above ${THRESHOLD_MB} MB or failed clone."
+    if [[ "$warning_repos" -gt 0 ]]; then
+      echo
+      echo "=========================================="
+      echo "WARNINGS - Files above ${THRESHOLD_MB} MB found"
+      echo "=========================================="
+      echo "Note: GitHub Enterprise Importer does not support files above ${THRESHOLD_MB} MB."
+      echo "These files must be removed or handled using git-lfs before migration."
+      echo
+      cat "$warning_summary_file"
+    fi
+
+    if [[ "$failed_clone_repos" -gt 0 ]]; then
+      echo
+      echo "=========================================="
+      echo "ERRORS - Repositories failed to clone"
+      echo "=========================================="
+      echo "See log for details: $LOG_FILE"
+    fi
+  } | tee "$FINAL_REPORT"
+
+  # ------------------------------------------------------------
+  # Exit strategy
+  # ------------------------------------------------------------
+  # Do NOT fail the pipeline when large files are found.
+  # Only fail if clone actually failed for one or more repositories.
+  if [[ "$clone_failure" -ne 0 ]]; then
+    echo
+    echo "[ERROR] GitSizer readiness check completed with clone failures."
+    echo "[ERROR] See '$FINAL_REPORT' and '$LOG_FILE' for details."
     exit 1
   fi
 
-  echo "[INFO] GitSizer readiness check passed."
+  echo
+  echo "[INFO] GitSizer readiness check completed successfully."
+
+  if [[ "$warning_repos" -gt 0 ]]; then
+    echo "[WARNING] $warning_repos repositor(y/ies) contain file(s) above ${THRESHOLD_MB} MB."
+    echo "[WARNING] Review '$FINAL_REPORT' and '$LARGE_FILES_CSV' before starting migration."
+  fi
 }
 
 # ------------------------------------------------------------
