@@ -214,8 +214,6 @@ create_repo_list() {
   }
   ' "$INVENTORY_FILE" > "$REPO_LIST_TSV"
 
-}
-
   echo "[INFO] Repository list generated: $REPO_LIST_TSV"
   echo "[INFO] Repository count: $(wc -l < "$REPO_LIST_TSV" | tr -d ' ')"
 }
