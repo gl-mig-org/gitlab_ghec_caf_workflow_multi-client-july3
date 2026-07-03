@@ -1,2 +1,2 @@
 Namespace,Project,Commit_Count,Branch_Count,Full_URL,github_org,github_repo,gh_repo_visibility,include_in_export,exclude_from_export
-migration-demo-group,Btop,false,false,false,14,0,1,1,0,0,0,1,0,1493,0,0,4,54,false,http://gitlabpoc.eastus.cloudapp.azure.com/migration-demo-group/btop,2026-02-20T05:53:23Z,2026-07-03T10:49:50Z,2026-07-03T10:49:50Z,gl-mig-org,btop-test,private,,
+migration-demo-group,Btop,17,1,http://gitlabpoc.eastus.cloudapp.azure.com/migration-demo-group/btop,gl-mig-org,btop-test-july3,public,,commit_comments
