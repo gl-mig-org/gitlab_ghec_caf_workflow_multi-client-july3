@@ -263,10 +263,11 @@ create_repo_list() {
       project_path_keys[++project_path_count] = "path"
 
       repo_name_count = 0
-      repo_name_keys[++repo_name_count] = "name"
+      repo_name_keys[++repo_name_count] = "project"
       repo_name_keys[++repo_name_count] = "repo_name"
       repo_name_keys[++repo_name_count] = "repository_name"
       repo_name_keys[++repo_name_count] = "project_name"
+      repo_name_keys[++repo_name_count] = "name"
     }
 
     NR == 1 {
