@@ -179,157 +179,42 @@ install_git_sizer() {
 # This AWK parser handles normal CSV and quoted CSV fields.
 # ------------------------------------------------------------
 create_repo_list() {
-  echo "[INFO] Reading repositories from $INVENTORY_FILE"
 
-  awk -v source_url="$SOURCE_GL_SERVER_URL" '
-    function trim(s) {
-      gsub(/^[ \t\r\n]+/, "", s)
-      gsub(/[ \t\r\n]+$/, "", s)
-      return s
-    }
+  awk -F',' '
+  NR==1 {
 
-    function normkey(s) {
-      s = tolower(trim(s))
-      gsub(/[^a-z0-9]+/, "_", s)
-      gsub(/^_+/, "", s)
-      gsub(/_+$/, "", s)
-      return s
-    }
+      for(i=1;i<=NF;i++) {
 
-    function csvsplit(line, arr,    i, c, n, field, inquote, nextc) {
-      n = 1
-      field = ""
-      inquote = 0
+          gsub(/"/,"",$i)
 
-      for (i = 1; i <= length(line); i++) {
-        c = substr(line, i, 1)
+          if(tolower($i)=="namespace")
+              ns=i
 
-        if (c == "\"") {
-          nextc = substr(line, i + 1, 1)
+          if(tolower($i)=="project")
+              proj=i
 
-          if (inquote && nextc == "\"") {
-            field = field "\""
-            i++
-          } else {
-            inquote = !inquote
-          }
-        } else if (c == "," && !inquote) {
-          arr[n++] = field
-          field = ""
-        } else {
-          field = field c
-        }
-      }
-
-      arr[n] = field
-      return n
-    }
-
-    function get_value(keys, key_count, fields,    i, key, idx_value, value) {
-      for (i = 1; i <= key_count; i++) {
-        key = keys[i]
-
-        if (key in header_index) {
-          idx_value = header_index[key]
-          value = trim(fields[idx_value])
-
-          if (value != "") {
-            return value
-          }
-        }
-      }
-
-      return ""
-    }
-
-    BEGIN {
-      repo_url_count = 0
-      repo_url_keys[++repo_url_count] = "full_url"
-      repo_url_keys[++repo_url_count] = "http_url_to_repo"
-      repo_url_keys[++repo_url_count] = "https_url_to_repo"
-      repo_url_keys[++repo_url_count] = "clone_url"
-      repo_url_keys[++repo_url_count] = "repo_url"
-      repo_url_keys[++repo_url_count] = "repository_url"
-      repo_url_keys[++repo_url_count] = "url"
-      repo_url_keys[++repo_url_count] = "web_url"
-
-
-      project_path_count = 0
-      project_path_keys[++project_path_count] = "path_with_namespace"
-      project_path_keys[++project_path_count] = "full_path"
-      project_path_keys[++project_path_count] = "project_path"
-      project_path_keys[++project_path_count] = "repository_path"
-      project_path_keys[++project_path_count] = "repo_path"
-      project_path_keys[++project_path_count] = "path"
-
-      repo_name_count = 0
-      repo_name_keys[++repo_name_count] = "project"
-      repo_name_keys[++repo_name_count] = "repo_name"
-      repo_name_keys[++repo_name_count] = "repository_name"
-      repo_name_keys[++repo_name_count] = "project_name"
-      repo_name_keys[++repo_name_count] = "name"
-    }
-
-    NR == 1 {
-      delete headers
-      header_count = csvsplit($0, headers)
-
-      for (i = 1; i <= header_count; i++) {
-        header_index[normkey(headers[i])] = i
+          if(tolower($i)=="full_url")
+              url=i
       }
 
       next
-    }
+  }
 
-    NR > 1 {
-      delete fields
-      field_count = csvsplit($0, fields)
+  {
 
-      repo_url = get_value(repo_url_keys, repo_url_count, fields)
-      project_path = get_value(project_path_keys, project_path_count, fields)
-      repo_name = get_value(repo_name_keys, repo_name_count, fields)
+      namespace=$ns
+      project=$proj
+      repo_url=$url
 
-      if (repo_name == "" && project_path != "") {
-        repo_name = project_path
-        sub(/^.*\//, "", repo_name)
-      }
+      gsub(/"/,"",namespace)
+      gsub(/"/,"",project)
+      gsub(/"/,"",repo_url)
 
-      if (repo_url == "" && project_path != "") {
-        repo_url = source_url "/" project_path ".git"
-      }
-
-      if (repo_url != "" && repo_url !~ /\.git$/ && repo_url ~ /^https?:\/\//) {
-        repo_url = repo_url ".git"
-      }
-
-      if (repo_url == "") {
-        print "[WARN] Skipping row because repo URL/path was not found: " $0 > "/dev/stderr"
-        next
-      }
-
-      if (project_path == "") {
-        project_path = repo_url
-        sub(/\.git$/, "", project_path)
-        sub(/^https?:\/\//, "", project_path)
-        sub(/^[^\/]+\//, "", project_path)
-      }
-
-      if (repo_name == "") {
-        repo_name = project_path
-        sub(/^.*\//, "", repo_name)
-      }
-
-      print repo_name "\t" repo_url "\t" project_path
-      count++
-    }
-
-    END {
-      if (count == 0) {
-        print "[ERROR] No repositories found from inventory file" > "/dev/stderr"
-        exit 1
-      }
-    }
+      print project "\t" repo_url "\t" namespace "/" project
+  }
   ' "$INVENTORY_FILE" > "$REPO_LIST_TSV"
+
+}
 
   echo "[INFO] Repository list generated: $REPO_LIST_TSV"
   echo "[INFO] Repository count: $(wc -l < "$REPO_LIST_TSV" | tr -d ' ')"
